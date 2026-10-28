@@ -1,0 +1,125 @@
+name: Bawsala CI CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bawsala-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: 9.0.x
+  NODE_VERSION: 20
+  FRONTEND_PATH: src/frontend/dana-cotech-web
+  API_PROJECT: src/backend/DanaCotech.Api/DanaCotech.Api.csproj
+
+jobs:
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        working-directory: ${{ env.FRONTEND_PATH }}
+        env:
+          VITE_API_BASE_URL: /api
+        run: npm run build
+
+      - name: Restore backend
+        run: dotnet restore ${{ env.API_PROJECT }}
+
+      - name: Build backend
+        run: dotnet build ${{ env.API_PROJECT }} --configuration Release --no-restore
+
+      - name: Publish backend
+        run: dotnet publish ${{ env.API_PROJECT }} --configuration Release --no-build --output release/api
+
+      - name: Stage frontend
+        run: cp -R "${{ env.FRONTEND_PATH }}/dist" release/web
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bawsala-release
+          path: release
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    name: Deploy to Hostinger Ubuntu VPS
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download verified release
+        uses: actions/download-artifact@v4
+        with:
+          name: bawsala-release
+          path: release
+
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/bawsala_deploy
+          chmod 600 ~/.ssh/bawsala_deploy
+          ssh-keyscan -p "${VPS_PORT:-22}" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload atomic release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          PORT="${VPS_PORT:-22}"
+          ROOT="${DEPLOY_PATH:-/var/www/bawsala}"
+          RELEASE="$ROOT/releases/${GITHUB_SHA}"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$RELEASE/api' '$RELEASE/web'"
+          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/api/ "$VPS_USER@$VPS_HOST:$RELEASE/api/"
+          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/web/ "$VPS_USER@$VPS_HOST:$RELEASE/web/"
+
+      - name: Activate release and health check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          API_SERVICE: ${{ vars.API_SERVICE_NAME }}
+        run: |
+          PORT="${VPS_PORT:-22}"
+          ROOT="${DEPLOY_PATH:-/var/www/bawsala}"
+          SERVICE="${API_SERVICE:-bawsala-api}"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "ln -sfn '$ROOT/releases/${GITHUB_SHA}' '$ROOT/current' && sudo systemctl restart '$SERVICE' && sleep 3 && curl --fail --silent http://127.0.0.1:5115/health"

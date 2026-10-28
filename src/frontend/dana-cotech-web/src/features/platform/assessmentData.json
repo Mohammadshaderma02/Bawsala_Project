@@ -1,0 +1,873 @@
+{
+  "interests": [
+    {
+      "id": 1,
+      "en": "Build kitchen cabinets",
+      "ar": "بناء خِزانات المطابخ",
+      "type": "R"
+    },
+    {
+      "id": 2,
+      "en": "Enforce fish and game laws",
+      "ar": "تطبيق قوانين الألعاب",
+      "type": "R"
+    },
+    {
+      "id": 3,
+      "en": "Lay brick or tile",
+      "ar": "تركيب الأرضيات",
+      "type": "R"
+    },
+    {
+      "id": 4,
+      "en": "Perform lawn care services",
+      "ar": "تنسيق ورعاية الحدائق",
+      "type": "R"
+    },
+    {
+      "id": 5,
+      "en": "Study the history of past civilizations",
+      "ar": "دراسة تاريخ الحضارات السابقة",
+      "type": "I"
+    },
+    {
+      "id": 6,
+      "en": "Study the movement of planets",
+      "ar": "دراسة حركة الكواكب",
+      "type": "I"
+    },
+    {
+      "id": 7,
+      "en": "Develop a new medicine",
+      "ar": "تطوير دواء جديد",
+      "type": "I"
+    },
+    {
+      "id": 8,
+      "en": "Investigate the cause of a fire",
+      "ar": "التحقيق في أسباب الحرائق",
+      "type": "I"
+    },
+    {
+      "id": 9,
+      "en": "Write stories or articles for magazines",
+      "ar": "كتابة القصص أو المقالات للمجلات",
+      "type": "A"
+    },
+    {
+      "id": 10,
+      "en": "Compose or arrange music",
+      "ar": "التلحين وكتابة النوت الموسيقية",
+      "type": "A"
+    },
+    {
+      "id": 11,
+      "en": "Direct a play",
+      "ar": "إخراج مسرحية",
+      "type": "A"
+    },
+    {
+      "id": 12,
+      "en": "Draw pictures",
+      "ar": "الرسم",
+      "type": "A"
+    },
+    {
+      "id": 13,
+      "en": "Perform nursing duties in a hospital",
+      "ar": "التمريض في مستشفى",
+      "type": "S"
+    },
+    {
+      "id": 14,
+      "en": "Help elderly people with their daily activities",
+      "ar": "مساعدة كبار السن في أنشطتهم اليومية",
+      "type": "S"
+    },
+    {
+      "id": 15,
+      "en": "Teach an elementary school class",
+      "ar": "تدريس فصل ابتدائي",
+      "type": "S"
+    },
+    {
+      "id": 16,
+      "en": "Counsel people who have a threatening illness",
+      "ar": "إرشاد مرضى الأمراض المهددة للحياة",
+      "type": "S"
+    },
+    {
+      "id": 17,
+      "en": "Manage a retail store",
+      "ar": "إدارة محل تجاري",
+      "type": "E"
+    },
+    {
+      "id": 18,
+      "en": "Manage a department within a large company",
+      "ar": "إدارة قسم في شركة كبيرة",
+      "type": "E"
+    },
+    {
+      "id": 19,
+      "en": "Operate a beauty salon or barbershop",
+      "ar": "إدارة مركز تجميل أو محل حلاقة",
+      "type": "E"
+    },
+    {
+      "id": 20,
+      "en": "Represent a client in a lawsuit",
+      "ar": "تمثيل موكِّل في قضية",
+      "type": "E"
+    },
+    {
+      "id": 21,
+      "en": "Develop a spreadsheet using computer software",
+      "ar": "جدولة البيانات باستخدام برامج الكمبيوتر",
+      "type": "C"
+    },
+    {
+      "id": 22,
+      "en": "Perform office filing tasks",
+      "ar": "العمل في حفظ وتبويب الملفات في مكتب",
+      "type": "C"
+    },
+    {
+      "id": 23,
+      "en": "Proofread records or forms",
+      "ar": "تصحيح وتنقيح السجلات والاستمارات",
+      "type": "C"
+    },
+    {
+      "id": 24,
+      "en": "Calculate the wages of employees",
+      "ar": "حساب مرتبات الموظفين",
+      "type": "C"
+    },
+    {
+      "id": 25,
+      "en": "Repair household appliances",
+      "ar": "تصليح الأجهزة المنزلية",
+      "type": "R"
+    },
+    {
+      "id": 26,
+      "en": "Do cleaning or maintenance work",
+      "ar": "القيام بأعمال الصيانة والتنظيف",
+      "type": "R"
+    },
+    {
+      "id": 27,
+      "en": "Assemble electronic parts",
+      "ar": "تركيب الأجزاء الألكترونية",
+      "type": "R"
+    },
+    {
+      "id": 28,
+      "en": "Operate a motor-boat to carry passengers",
+      "ar": "قيادة قارب بخاري لنقل الركاب",
+      "type": "R"
+    },
+    {
+      "id": 29,
+      "en": "Study wats to reduce water pollution",
+      "ar": "دراسة سبل الحد من تلوث المياه",
+      "type": "I"
+    },
+    {
+      "id": 30,
+      "en": "Study the structure of the human body",
+      "ar": "دراسة التركيب البنياني للإنسان",
+      "type": "I"
+    },
+    {
+      "id": 31,
+      "en": "Diagnose and treat sick animals",
+      "ar": "تشخيص وعلاج الحيوانات المريضة",
+      "type": "I"
+    },
+    {
+      "id": 32,
+      "en": "Develop psychological profile of criminals",
+      "ar": "عمل تقييم نفسي للمجرمين",
+      "type": "I"
+    },
+    {
+      "id": 33,
+      "en": "Create dance routines for a show",
+      "ar": "تصميم الرقصات لبرنامج",
+      "type": "A"
+    },
+    {
+      "id": 34,
+      "en": "Create special effects for movies",
+      "ar": "عمل المؤثرات الخاصة في الأفلام",
+      "type": "A"
+    },
+    {
+      "id": 35,
+      "en": "Write books or plays",
+      "ar": "تأليف الكتب أو المسرحيات",
+      "type": "A"
+    },
+    {
+      "id": 36,
+      "en": "Announce a radio show",
+      "ar": "تقديم برنامج إذاعي",
+      "type": "A"
+    },
+    {
+      "id": 37,
+      "en": "Work with mentally disabled children",
+      "ar": "العمل مع الأطفال متحدي الإعاقة الذهنية",
+      "type": "S"
+    },
+    {
+      "id": 38,
+      "en": "Help people who have problems with drugs or alcohol",
+      "ar": "مساعدة مدمني المخدرات والكحوليات",
+      "type": "S"
+    },
+    {
+      "id": 39,
+      "en": "Help people with personal or emotional problems",
+      "ar": "مساعدة من يعانون من مشاكل نفسية",
+      "type": "S"
+    },
+    {
+      "id": 40,
+      "en": "Teach disabled people work and living skills",
+      "ar": "تعليم متحدي الإعاقة مهارات العمل والحياة",
+      "type": "S"
+    },
+    {
+      "id": 41,
+      "en": "Give a presentation about a product you are selling",
+      "ar": "تقديم عرض عن منتج تبيعه",
+      "type": "E"
+    },
+    {
+      "id": 42,
+      "en": "Sell automobiles",
+      "ar": "بيع السيارات",
+      "type": "E"
+    },
+    {
+      "id": 43,
+      "en": "Buy and sell land",
+      "ar": "بيع وشراء الأراضي",
+      "type": "E"
+    },
+    {
+      "id": 44,
+      "en": "Market a new line of clothing",
+      "ar": "الترويج لِخَط ملابس جديد",
+      "type": "E"
+    },
+    {
+      "id": 45,
+      "en": "Schedule conferences for an organization",
+      "ar": "ترتيب المؤتمرات لمنظمة",
+      "type": "C"
+    },
+    {
+      "id": 46,
+      "en": "Keep records of financial transactions for an organization",
+      "ar": "حفظ سجلات العمليات المالية لمنظمة",
+      "type": "C"
+    },
+    {
+      "id": 47,
+      "en": "Organize and schedule office meetings",
+      "ar": "تنظيم وجدولة الاجتماعات",
+      "type": "C"
+    },
+    {
+      "id": 48,
+      "en": "Photocopy letters and reports",
+      "ar": "نسخ وتصوير الخطابات والتقارير",
+      "type": "C"
+    },
+    {
+      "id": 49,
+      "en": "Drive a truck to deliver packages to office and homes",
+      "ar": "قيادة الشاحنات لتوصيل الطرود للمكاتب والمنازل",
+      "type": "R"
+    },
+    {
+      "id": 50,
+      "en": "Put out forest fires",
+      "ar": "إطفاء حرائق الغابات",
+      "type": "R"
+    },
+    {
+      "id": 51,
+      "en": "Paint houses",
+      "ar": "طلاء المنازل",
+      "type": "R"
+    },
+    {
+      "id": 52,
+      "en": "Catch fish as a member of a fishing crew",
+      "ar": "صيد الأسماك ضمن فريق صيد",
+      "type": "R"
+    },
+    {
+      "id": 53,
+      "en": "Study rocks and minerals",
+      "ar": "دراسة المعادن و الصخور",
+      "type": "I"
+    },
+    {
+      "id": 54,
+      "en": "Study genetics",
+      "ar": "دراسة الهندسة الوراثية",
+      "type": "I"
+    },
+    {
+      "id": 55,
+      "en": "Investigate crimes",
+      "ar": "التحقيق في الجرائم",
+      "type": "I"
+    },
+    {
+      "id": 56,
+      "en": "Do research on plants or animals",
+      "ar": "عمل أبحاث على النباتات والحيوانات",
+      "type": "I"
+    },
+    {
+      "id": 57,
+      "en": "Play a musical instraument",
+      "ar": "اللعب على آلة موسيقية",
+      "type": "A"
+    },
+    {
+      "id": 58,
+      "en": "Sing in a band",
+      "ar": "الغناء ضمن فرقة موسيقية",
+      "type": "A"
+    },
+    {
+      "id": 59,
+      "en": "Act in a movie",
+      "ar": "التمثيل في الأفلام",
+      "type": "A"
+    },
+    {
+      "id": 60,
+      "en": "Design artwork for magazines",
+      "ar": "التصميم الفني للمجلات",
+      "type": "A"
+    },
+    {
+      "id": 61,
+      "en": "Give career guidance to people",
+      "ar": "إعطاء التوجيه المهني",
+      "type": "S"
+    },
+    {
+      "id": 62,
+      "en": "Take care of children at a day care center",
+      "ar": "رعاية الأطفال في دور الحضانة",
+      "type": "S"
+    },
+    {
+      "id": 63,
+      "en": "Do volunteer work at a nonprofit organization",
+      "ar": "العمل التطوعي في منظمة غير هادفة للربح",
+      "type": "S"
+    },
+    {
+      "id": 64,
+      "en": "Work with juveniles on probation",
+      "ar": "العمل مع الأحداث الموضوعين تحت المراقبة",
+      "type": "S"
+    },
+    {
+      "id": 65,
+      "en": "Manage the operation of a hotel",
+      "ar": "إدارة الفنادق",
+      "type": "E"
+    },
+    {
+      "id": 66,
+      "en": "Sell merchandise at a department store",
+      "ar": "بيع المنتجات في متجر كبير",
+      "type": "E"
+    },
+    {
+      "id": 67,
+      "en": "Negotiate business contracts",
+      "ar": "المفاوضة في العقود التجارية",
+      "type": "E"
+    },
+    {
+      "id": 68,
+      "en": "Be responsible for the operation of a company",
+      "ar": "تحمل مسئولية تشغيل شركة",
+      "type": "E"
+    },
+    {
+      "id": 69,
+      "en": "Use a word processor to edit and format documents",
+      "ar": "استخدام برنامج معالجة النصوص لتنسيق وتعديل الوثائق",
+      "type": "C"
+    },
+    {
+      "id": 70,
+      "en": "Keep inventory records",
+      "ar": "حفظ سجلات المخزون",
+      "type": "C"
+    },
+    {
+      "id": 71,
+      "en": "Direct or transfer phone calls for a large organization",
+      "ar": "توجيه وتحويل المكالمات التليفونية في منظمة كبيرة",
+      "type": "C"
+    },
+    {
+      "id": 72,
+      "en": "Handle customer bank transactions",
+      "ar": "تولّي المعاملات البنكية لعميل",
+      "type": "C"
+    }
+  ],
+  "values": [
+    {
+      "id": 1,
+      "en": "Tradition",
+      "descriptionEn": "Be involved in work that is consistent with the social traditions in which I was brought up with.",
+      "ar": "العادة",
+      "descriptionAr": ".الاشتراك في أعمال تتماشى مع العادات الاجتماعية التي نشأت عليها"
+    },
+    {
+      "id": 2,
+      "en": "Precision Work",
+      "descriptionEn": "Deal with tasks that have exact specifications, that require careful, accurate attention to detail.",
+      "ar": "العمل الدقيق",
+      "descriptionAr": ".التعامل مع مهام ذات مواصفات معينة تتطلب الحرص والدقة والانتباه للتفاصيل"
+    },
+    {
+      "id": 3,
+      "en": "Make Decisions",
+      "descriptionEn": "Have the power to decide courses of action, policies, etc, - a judgment job.",
+      "ar": "إتخاذ القرارت",
+      "descriptionAr": ".القدرة على إتخاذ القرارات والسياسات وما إلى ذلك- وظيفة الحَكم"
+    },
+    {
+      "id": 4,
+      "en": "Public Contact",
+      "descriptionEn": "Have a lot of day-to-day contact with people.",
+      "ar": "التواصل العام مع الناس",
+      "descriptionAr": ".التواصل مع الناس يومياً وبكثرة"
+    },
+    {
+      "id": 5,
+      "en": "Moral Fulfillment",
+      "descriptionEn": "Feel that my work is contributing to ideals I feel are very important.",
+      "ar": "الأداء الأخلاقي",
+      "descriptionAr": ".الشعور بأن العمل الذي أقوم به يساهم في تبني المثل التي أؤمن بأهميتها"
+    },
+    {
+      "id": 6,
+      "en": "Structure And Predictability",
+      "descriptionEn": "Do work with a high level of structure and predictability.",
+      "ar": "البنية والتنبؤية",
+      "descriptionAr": ".إنجاز الأعمال على مستوى عالي من التنظيم والتوقع"
+    },
+    {
+      "id": 7,
+      "en": "Time Freedom",
+      "descriptionEn": "Have responsibilities at which I can work according to my time schedule; no specific working hours required.",
+      "ar": "حرية الوقت",
+      "descriptionAr": ".تبني مسؤوليات العمل وفقاً لجدول أعمالي وليس لساعات العمل المحددة المطلوبة"
+    },
+    {
+      "id": 8,
+      "en": "Advancement",
+      "descriptionEn": "Be able to get ahead rapidly, gaining opportunities for growth and seniority from work well-done.",
+      "ar": "التطور",
+      "descriptionAr": ".القدرة على التطور السريع واستغلال الفرص للنمو والتفوق من خلال إتقان العمل"
+    },
+    {
+      "id": 9,
+      "en": "Work On The Frontiers Of Knowledge",
+      "descriptionEn": "Work in research and development, generating information and new ideas in the academic, scientific, or business communities.",
+      "ar": "العمل في حدود المعرفة",
+      "descriptionAr": "العمل في نطاق البحث والتطوير وإبتكار المعلومات والأفكار الجديدة .في المجالات .الأكاديمية أو العلمية أو التجارية"
+    },
+    {
+      "id": 10,
+      "en": "Diversity",
+      "descriptionEn": "Work in a setting that includes individuals of diverse religious, racial or social backgrounds.",
+      "ar": "التنوع",
+      "descriptionAr": ".العمل في مكان يضم أفراداً من ديانات وخلفيات عرقية أوإجتماعية مختلفة"
+    },
+    {
+      "id": 11,
+      "en": "Supervision",
+      "descriptionEn": "Have a job in which I am directly responsible for work done by others.",
+      "ar": "الإشراف",
+      "descriptionAr": ".الحصول على عمل أتولى فيه مسؤولية الأعمال التي يفعلها الأخرون بشكل مباشر"
+    },
+    {
+      "id": 12,
+      "en": "Recognition",
+      "descriptionEn": "Get positive feedback and public credit for work well done.",
+      "ar": "التقدير",
+      "descriptionAr": ".الحصول على مردود إيجابي وشكر عام على الأعمال المؤداة التى قمت بها بإتقان"
+    },
+    {
+      "id": 13,
+      "en": "Aesthetics",
+      "descriptionEn": "Be involved in studying or appreciating the beauty of things or ideas.",
+      "ar": "الجماليات",
+      "descriptionAr": ".الاشتراك في دراسة أو تقدير الحس الجمالي الموجود في الأشياء أوالأفكار"
+    },
+    {
+      "id": 14,
+      "en": "Fun And Humor",
+      "descriptionEn": "Work in a setting where it is possible (and appropriate) to joke and have fun.",
+      "ar": "المرح والفكاهة",
+      "descriptionAr": ".العمل في مكان يتسنى لى فيه الحصول على المرح والفكاهة"
+    },
+    {
+      "id": 15,
+      "en": "Artistic Creativity",
+      "descriptionEn": "Engage in creative work in any of several art forms.",
+      "ar": "الإبداع الفني",
+      "descriptionAr": ".الاشتراك في الأعمال المبدعة لأى شكل من الأشكال المتنوعه و المختلفه للفن"
+    },
+    {
+      "id": 16,
+      "en": "Stability",
+      "descriptionEn": "Have a work routine and job duties that are largely predictable and not likely to change over a long period of time.",
+      "ar": "الإستقرار",
+      "descriptionAr": "التمتع بنظام عمل وواجبات وظيفة يمكن توقعها بسهولة وغير قابلة للتغيير على المدى الطويل"
+    },
+    {
+      "id": 17,
+      "en": "Location",
+      "descriptionEn": "Find a place to live (town or geographic area) conducive to my lifestyle, a desirable home base for my leisure, learning and work life.",
+      "ar": "الموقع",
+      "descriptionAr": ".العثور على مكان للعيش فيه (سواء كان مدينة أو منطقة جغرافية) ملائم لنمط الحياة الخاص بي ويكون مكان محبب لقضاء وقت الفراغ والتعلم وممارسة العمل"
+    },
+    {
+      "id": 18,
+      "en": "Influence People",
+      "descriptionEn": "Be in a position to change attitudes or opinions of others.",
+      "ar": "التأثير في الأشخاص",
+      "descriptionAr": ".الوجود في منصب يمكنك من تغيير سلوكيات أو أراء الأخرين"
+    },
+    {
+      "id": 19,
+      "en": "Spirituality",
+      "descriptionEn": "Work in a setting that is supportive of my spiritual beliefs.",
+      "ar": "الروحانيات",
+      "descriptionAr": ".العمل في مكان يدعم معتقداتي الروحانية"
+    },
+    {
+      "id": 20,
+      "en": "Creativity",
+      "descriptionEn": "Create new ideas, programs organized structures or anything else not following a format developed by others.",
+      "ar": "الإبداع",
+      "descriptionAr": "إبتداع أفكار وبرامج وهياكل منظمة أو أي شيء آخر يختلف عما قام به الآخرون"
+    },
+    {
+      "id": 21,
+      "en": "Adventure",
+      "descriptionEn": "Have job duties which involve frequent risk-taking.",
+      "ar": "المغامرة",
+      "descriptionAr": ".الحصول على واجبات وظيفية تتسم بكثره المخاطرة"
+    },
+    {
+      "id": 22,
+      "en": "Intellectual Status",
+      "descriptionEn": "Be regarded as very well-informed and a strong theorist, as one acknowledged \"expert\" in a given field.",
+      "ar": "الحاله الفكريه",
+      "descriptionAr": "إعتبارك شخص واسع المعرفة ومُنظِّر قوي كأحد الخبراء المعترف بهم في مجال معين"
+    },
+    {
+      "id": 23,
+      "en": "Environment",
+      "descriptionEn": "Work on tasks that have a positive effect on the natural environment.",
+      "ar": "البيئة",
+      "descriptionAr": ".العمل في مهام تؤثر إيجابياً على البيئة الطبيعية"
+    },
+    {
+      "id": 24,
+      "en": "Job Tranquility",
+      "descriptionEn": "Avoid pressure and \"the rat race\" in my job role and work setting.",
+      "ar": "الهدوء الوظيفي",
+      "descriptionAr": ".تجنب الضغط ( كسباق الفئران ) في المهام الوظيفية ومكان العمل"
+    },
+    {
+      "id": 25,
+      "en": "Community",
+      "descriptionEn": "Live in a town or city where I can meet my neighbors and become active in local politics or service projects.",
+      "ar": "المجتمع",
+      "descriptionAr": ".العيش في بلدة أو مدينة حيث يمكنني الإلتقاء بجيراني والمشاركة في السياسات المحلية أو المشروعات الخدمية"
+    },
+    {
+      "id": 26,
+      "en": "Work Under Pressure",
+      "descriptionEn": "Work in time-pressured circumstances, where there is little or no margin for error, or with demanding personal relationships.",
+      "ar": "العمل تحت الضغط",
+      "descriptionAr": ".العمل في أوقات الضغط حيث لا يوجد مجال لأي خطأ أو علاقات شخصية"
+    },
+    {
+      "id": 27,
+      "en": "Change And Variety",
+      "descriptionEn": "Have work responsibilities frequently changed in content or setting.",
+      "ar": "التغيير والتنوع",
+      "descriptionAr": ".الحصول على مسئوليات متغيرة في عملك"
+    },
+    {
+      "id": 28,
+      "en": "Security",
+      "descriptionEn": "Be assured of keeping my job and a reasonable financial reward.",
+      "ar": "الأمان",
+      "descriptionAr": ".التأكد من الإحتفاظ بالوظيفة ومكافأة مالية معقولة"
+    },
+    {
+      "id": 29,
+      "en": "Work-Life Balance",
+      "descriptionEn": "A job that allows me adequate time for my family, hobbies and social activities.",
+      "ar": "التوازن بين العمل والحياة",
+      "descriptionAr": ".الحصول على وظيفة تسمح لي بوقت كافي أقضيه مع الأسرة، أو في ممارسة هواياتي وأنشطتي الاجتماعية"
+    },
+    {
+      "id": 30,
+      "en": "Work Alone",
+      "descriptionEn": "Do projects by myself, without any amount of contact or input from others.",
+      "ar": "العمل منفرداً",
+      "descriptionAr": ".أداء المشروعات منفرداً دون أي احتكاك بالأخرين أو إعتماد عليهم"
+    },
+    {
+      "id": 31,
+      "en": "Help Society",
+      "descriptionEn": "Do something to contribute to the betterment of the world.",
+      "ar": "خدمة المجتمع",
+      "descriptionAr": ".القيام بأي شيء يساهم في تحسين أحوال العالم"
+    },
+    {
+      "id": 32,
+      "en": "Family",
+      "descriptionEn": "Insure that the type of work I do and the hours I work fit with my family responsibilities.",
+      "ar": "العائلة",
+      "descriptionAr": ".ضمان ملائمة نوعية العمل وساعات العمل التي أشغلها مع مسؤوليات العائلة"
+    },
+    {
+      "id": 33,
+      "en": "Affiliation",
+      "descriptionEn": "Be recognized as a member of a particular organization.",
+      "ar": "الإنتماء",
+      "descriptionAr": ". التعامل معك على أنك عضو داخل كيان معين"
+    },
+    {
+      "id": 34,
+      "en": "Exercise Competence",
+      "descriptionEn": "Demonstrate a high degree of proficiency in job skills and knowledge; show above average effectiveness.",
+      "ar": "ممارسة الكفاءة",
+      "descriptionAr": ".إظهار أعلى درجة من الكفاءة في مهارات العمل والمعرفة، وإظهار مستوى فوق المتوسط في الفاعلية."
+    },
+    {
+      "id": 35,
+      "en": "Challenging Problems",
+      "descriptionEn": "Engage continually with complex questions and demanding tasks, trouble-shooting and problem-solving as a core part of my job.",
+      "ar": "تحدي المشكلات",
+      "descriptionAr": ".الانخراط المستمر في الأسئلة المعقدة والمهام المطلوبة وإكتشاف الأزمات و المشاكل وحلها كجزء من صميم عملك"
+    },
+    {
+      "id": 36,
+      "en": "Creative Expression",
+      "descriptionEn": "Be able to express in writing and in person my ideas concerning my job and how I might improve it; have opportunities for experimentation and innovation.",
+      "ar": "التعبير الإبداعى",
+      "descriptionAr": ".القدرة على التعبير عن أفكارك المتعلقة بالعمل وكيفية تطويرها كتابة وفعلاً؛ والحصول على فرص للتجريب والابتكار"
+    },
+    {
+      "id": 37,
+      "en": "High Earnings Anticipated",
+      "descriptionEn": "Be able to purchase essentials and the luxuries of life that I wish.",
+      "ar": "المكاسب العالية المتوقعة",
+      "descriptionAr": ".القدرة على شراء ضروريات وكماليات الحياة التي ترغب بها"
+    },
+    {
+      "id": 38,
+      "en": "Personal Safety",
+      "descriptionEn": "Have a high probability of being safe and healthy at work.",
+      "ar": "السلامة الشخصية",
+      "descriptionAr": ".وجود إحتمالية كبيرة في البقاء آمنا وبصحة جيدة في العمل"
+    },
+    {
+      "id": 39,
+      "en": "Group & Team",
+      "descriptionEn": "Work with a group to obtain team (rather than individual) results.",
+      "ar": "المجموعة والفريق",
+      "descriptionAr": ".العمل في مجموعات للحصول على نتائج جماعية بدلا من النتائج الفردية"
+    },
+    {
+      "id": 40,
+      "en": "Friendships",
+      "descriptionEn": "Develop close personal relationships with people as a result of work activity.",
+      "ar": "الصداقات",
+      "descriptionAr": ".تكوين علاقات شخصية قوية مع الآخرين نتيجة لممارسة العمل."
+    },
+    {
+      "id": 41,
+      "en": "Power And Authority",
+      "descriptionEn": "Control the work activities or destinies of others.",
+      "ar": "القوة والسلطة",
+      "descriptionAr": ".التحكم في أنشطة العمل أو مصائر الأخرين"
+    },
+    {
+      "id": 42,
+      "en": "Honesty And Integrity",
+      "descriptionEn": "Work in a setting where honesty and integrity are assets.",
+      "ar": "الأمانة والنزاهة",
+      "descriptionAr": ".العمل في مكان يقدس الأمانة والنزاهة"
+    },
+    {
+      "id": 43,
+      "en": "Practicality",
+      "descriptionEn": "Be involved in work that yields a practical or useful result.",
+      "ar": "التطبيق العملي",
+      "descriptionAr": ".المشاركة في عمل ينتج عنه نتائج عملية أو نافعة"
+    },
+    {
+      "id": 44,
+      "en": "Knowledge",
+      "descriptionEn": "Engage myself in pursuit of knowledge, truth and understanding.",
+      "ar": "المعرفة",
+      "descriptionAr": ".الانخراط في السعي وراء المعرفة والحقيقة والفهم"
+    },
+    {
+      "id": 45,
+      "en": "Status",
+      "descriptionEn": "Impress or gain the respect of friends, family and community by the nature and/or level of responsibility of my work.",
+      "ar": "المكانة الاجتماعية",
+      "descriptionAr": ".الحصول على إحترام الأصدقاء والعائلة والمجتمع من خلال طبيعة و/ أو مستوى المسؤولية فى عملي"
+    },
+    {
+      "id": 46,
+      "en": "Competition",
+      "descriptionEn": "Engage in activities which pit my abilities against others.",
+      "ar": "المنافسة",
+      "descriptionAr": ".المشاركة في أنشطة تتحدى قدراتي أمام الأخرين"
+    },
+    {
+      "id": 47,
+      "en": "Help Others",
+      "descriptionEn": "Be involved in helping people directly, either individually or in small groups.",
+      "ar": "مساعدة الأخرين",
+      "descriptionAr": ".المشاركة في مساعدة الأشخاص بشكل مباشر سواء كان ذلك فردياً أو من خلال جماعات صغيرة"
+    },
+    {
+      "id": 48,
+      "en": "Excitement",
+      "descriptionEn": "Experience a high degree of stimulation or frequent novelty and drama on the job.",
+      "ar": "الإثارة",
+      "descriptionAr": ".تجربة درجة عالية من التحفيز أو التجديد المتكرر والإثارة في العمل"
+    },
+    {
+      "id": 49,
+      "en": "Fast Pace",
+      "descriptionEn": "Work in circumstances where there is a high pace of activity and work is done rapidly.",
+      "ar": "السرعة",
+      "descriptionAr": ".العمل في ظروف ترتقع بها وتيرة النشاط وسرعة أداء الأعمال"
+    },
+    {
+      "id": 50,
+      "en": "Independence",
+      "descriptionEn": "Be able to determine the nature of my work without significant direction of others, Not have to follow instructions or to conform to regulations.",
+      "ar": "الإستقلال",
+      "descriptionAr": ".القدرة على تحديد طبيعة عملي دون توجيه ملحوظ من الأخرين أو إتباع التعليمات أو الإلتزام باللوائح"
+    },
+    {
+      "id": 51,
+      "en": "Work With Others",
+      "descriptionEn": "Have close working relations with a group and work as a team to common goals.",
+      "ar": "العمل مع الأخرين",
+      "descriptionAr": ".تكوين علاقات عمل وثيقة مع المجموعة والعمل كفريق واحد لتحقيق الأهداف المشتركة"
+    },
+    {
+      "id": 52,
+      "en": "Profit, Gain",
+      "descriptionEn": "Have a strong likelihood of accumulating large amounts of money or other material gain through ownership, profit-sharing, commissions, merit increases, etc.",
+      "ar": "الربح والمكسب",
+      "descriptionAr": "وجود احتمالات قوية لجمع مبالغ مالية ضخمة أو أي كسب مادي من خلال التملك أو نسبة من الأرباح أو العمولات أو العلاوات..إلخ"
+    },
+    {
+      "id": 53,
+      "en": "Physical Challenge",
+      "descriptionEn": "Have a job that requires bodily strength, speed, dexterity or agility.",
+      "ar": "التحدي البدني",
+      "descriptionAr": ".الحصول على وظيفة تتطلب قوة بدنية وسرعة و خفه ورشاقة"
+    },
+    {
+      "id": 54,
+      "en": "Steep Learning Curve",
+      "descriptionEn": "Be presented with new, unique or difficult tasks to be quickly mastered.",
+      "ar": "الاجتهاد في التعلم",
+      "descriptionAr": ".الإستعداد للمهام الجديدة والفريدة والصعبة لسرعة إتقانها"
+    }
+  ],
+  "purposeQuestions": [
+    {
+      "id": "spareTime",
+      "en": "What do you love to do when you have spare time?",
+      "ar": "ما الذي تحب فعله عندما يكون لديك وقت فراغ؟"
+    },
+    {
+      "id": "enjoy",
+      "en": "What aspects of your current job or life activities do you thoroughly enjoy?",
+      "ar": "ما الجوانب في وظيفتك الحالية أو أنشطتك الحياتية التي تستمتع بها تماماً؟"
+    },
+    {
+      "id": "naturalTalent",
+      "en": "What do you naturally do well?",
+      "ar": "ما الذي تفعله بشكل طبيعي وبإتقان؟"
+    },
+    {
+      "id": "passion",
+      "en": "Is there a cause, value, or quality that you feel passionate about?",
+      "ar": "هل هناك قضية أو قيمة أو صفة تشعر بشغف تجاهها؟"
+    },
+    {
+      "id": "successes",
+      "en": "What do you feel have been your ten greatest successes to date?",
+      "ar": "ما هي أعظم عشر نجاحات حققتها حتى الآن برأيك؟"
+    },
+    {
+      "id": "lessons",
+      "en": "What are the ten most important lessons you have learned in your life?",
+      "ar": "ما هي أهم عشر دروس تعلمتها في حياتك؟"
+    },
+    {
+      "id": "recurringIssues",
+      "en": "Which issues or perceived problems have occurred repeatedly in your life?",
+      "ar": "هل هناك قضايا أو مشاكل تكررت مراراً في حياتك؟"
+    },
+    {
+      "id": "dreams",
+      "en": "What do you daydream or dream about doing?",
+      "ar": "عن ماذا تحلم أو تتخيل أن تقوم به؟"
+    },
+    {
+      "id": "legacy",
+      "en": "What would you want to be remembered for? What would your life be incomplete without?",
+      "ar": "ما الذي تود أن يتم تذكرك به؟ وما الأمور التي ستكون حياتك ناقصة بدونها؟"
+    },
+    {
+      "id": "noFailure",
+      "en": "What would you do if you knew you could not fail?",
+      "ar": "ماذا ستفعل إذا كنت تعلم أنك لن تفشل؟"
+    },
+    {
+      "id": "themes",
+      "en": "What important themes do you notice across your responses?",
+      "ar": "ما الموضوعات الرئيسية التي تلاحظها في إجاباتك؟"
+    }
+  ]
+}

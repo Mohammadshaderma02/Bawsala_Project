@@ -1,0 +1,69 @@
+# Bawsala Ubuntu VPS Deployment
+
+This deployment uses GitHub Actions, Nginx, systemd, and atomic release folders. GitHub builds both applications, uploads a verified release over SSH, switches `/var/www/bawsala/current`, restarts the API, and checks `/health`.
+
+## 1 Server prerequisites
+
+Install Nginx, rsync, curl, and the .NET 9 ASP.NET Core runtime on the Hostinger Ubuntu VPS. Create a non-root deployment user with SSH key access.
+
+```bash
+sudo mkdir -p /var/www/bawsala/releases /etc/bawsala
+sudo chown -R YOUR_DEPLOY_USER:www-data /var/www/bawsala
+sudo chmod -R 775 /var/www/bawsala
+```
+
+Copy `deploy/bawsala.env.example` to `/etc/bawsala/bawsala.env`, replace every placeholder, and protect it:
+
+```bash
+sudo chown root:www-data /etc/bawsala/bawsala.env
+sudo chmod 640 /etc/bawsala/bawsala.env
+```
+
+Copy and enable the systemd service:
+
+```bash
+sudo cp deploy/bawsala-api.service /etc/systemd/system/bawsala-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable bawsala-api
+```
+
+Replace `YOUR_DOMAIN` in the Nginx template, install it, and validate it:
+
+```bash
+sudo cp deploy/bawsala.nginx.conf /etc/nginx/sites-available/bawsala
+sudo ln -s /etc/nginx/sites-available/bawsala /etc/nginx/sites-enabled/bawsala
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Use Certbot after DNS points to the VPS to enable HTTPS.
+
+## 2 GitHub repository configuration
+
+Create a private GitHub repository and add these Actions secrets under Settings, Secrets and variables, Actions:
+
+- `VPS_HOST`: VPS IP address or hostname.
+- `VPS_USER`: non-root deployment user.
+- `VPS_SSH_PRIVATE_KEY`: private key matching the public key installed for the deployment user.
+- `VPS_SSH_PORT`: optional, defaults to `22`.
+
+Add these repository variables:
+
+- `DEPLOY_PATH`: `/var/www/bawsala`
+- `API_SERVICE_NAME`: `bawsala-api`
+
+Protect the GitHub `production` environment if deployment approval is required.
+
+The deployment user must be permitted to restart only the Bawsala service without a password. Configure this narrowly through `sudoers` rather than granting unrestricted sudo access.
+
+## 3 Release flow
+
+- Pull requests run a clean frontend and backend build.
+- Pushes to `main` build the same verified artifact.
+- The artifact is transferred to a commit-specific release folder.
+- The `current` symbolic link is switched only after upload completes.
+- systemd restarts the API and the workflow checks the local health endpoint.
+
+Real application secrets stay only in `/etc/bawsala/bawsala.env` and never enter GitHub source control or build artifacts.
+
+Large videos are deliberately excluded from the Git repository and deployment artifact. Manage them through the Admin media library or a dedicated object-storage/CDN service so normal code deployments remain fast.
