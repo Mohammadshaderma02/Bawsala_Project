@@ -31,8 +31,5 @@ publish/
 logs/
 *.log
 
-# Large CMS media is persisted outside the code release.
-src/frontend/dana-cotech-web/public/media/stories/*.mp4
-
 # Local review artifacts
 .codex-docx-review/
