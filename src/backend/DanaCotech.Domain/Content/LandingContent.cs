@@ -47,7 +47,7 @@ public sealed record CheckoutOfferContent(
     IReadOnlyCollection<OfferVideoLesson> Lessons,
     string Type = "course",
     decimal Price = 0,
-    string Currency = "USD",
+    string Currency = "JOD",
     string Duration = "Self-paced",
     bool IsPublished = true,
     int SortOrder = 0,

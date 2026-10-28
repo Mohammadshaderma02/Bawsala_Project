@@ -24,12 +24,13 @@ public sealed class PaymentsController(IPlatformService platformService, IPlatfo
         if (provider.Equals("MEPS", StringComparison.OrdinalIgnoreCase))
         {
             if (!meps.IsConfigured) return BadRequest(new { Success=false, Message="MEPS Merchant ID or API Password is not configured on the backend" });
-            var mepsNow=DateTime.UtcNow; var mepsPayment=new PaymentTransaction(Guid.NewGuid(),userId,account.Name,account.Email,product.Type,product.Slug,product.Title,product.Price,product.Currency,"pending","meps","",mepsNow,null,null,""); await repository.CreatePaymentAsync(mepsPayment,cancellationToken);
+            var mepsCurrency=(configuration["Payments:Meps:Currency"] ?? "JOD").Trim().ToUpperInvariant();
+            var mepsNow=DateTime.UtcNow; var mepsPayment=new PaymentTransaction(Guid.NewGuid(),userId,account.Name,account.Email,product.Type,product.Slug,product.Title,product.Price,mepsCurrency,"pending","meps","",mepsNow,null,null,""); await repository.CreatePaymentAsync(mepsPayment,cancellationToken);
             var mepsFrontend=(configuration["Frontend:BaseUrl"] ?? "http://localhost:5174").TrimEnd('/');
             var orderId=mepsPayment.Id.ToString("N"); var returnUrl=$"{mepsFrontend}/checkout/{Uri.EscapeDataString(product.Slug)}?payment=meps-return&paymentId={mepsPayment.Id}"; var cancelUrl=$"{mepsFrontend}/checkout/{Uri.EscapeDataString(product.Slug)}?payment=cancelled&paymentId={mepsPayment.Id}";
             try
             {
-                var session=await meps.InitiateCheckoutAsync(orderId,product.Price,product.Currency,product.Title,account.Email,account.Name,returnUrl,cancelUrl,cancellationToken);
+                var session=await meps.InitiateCheckoutAsync(orderId,mepsPayment.Amount,mepsPayment.Currency,product.Title,account.Email,account.Name,returnUrl,cancelUrl,cancellationToken);
                 await repository.SetPaymentProviderReferenceAsync(mepsPayment.Id,$"{orderId}|{session.SessionId}|{session.SuccessIndicator}",cancellationToken);
                 return Ok(new { Success=true, Data=new CheckoutLaunch("meps",null,mepsPayment.Id,session.SessionId,session.CheckoutScriptUrl) });
             }
@@ -78,11 +79,12 @@ public sealed class PaymentsController(IPlatformService platformService, IPlatfo
         var session=(await repository.GetSessionsAsync(true,cancellationToken)).FirstOrDefault(item=>item.Id==request.SessionId && item.SessionType.Equals("coaching",StringComparison.OrdinalIgnoreCase));
         var product=(await platformService.GetCatalogAsync(request.Language,cancellationToken)).FirstOrDefault(item=>item.Slug=="one-to-one-coaching");
         if(session is null || product is null) return BadRequest(new { Success=false,Message="The selected coaching session is not available" });
-        var payment=new PaymentTransaction(Guid.NewGuid(),null,request.Name.Trim(),request.Email.Trim().ToLowerInvariant(),"coaching",product.Slug,product.Title,product.Price,product.Currency,"pending","meps","",DateTime.UtcNow,null,null,""); await repository.CreatePaymentAsync(payment,cancellationToken);
+        var mepsCurrency=(configuration["Payments:Meps:Currency"] ?? "JOD").Trim().ToUpperInvariant();
+        var payment=new PaymentTransaction(Guid.NewGuid(),null,request.Name.Trim(),request.Email.Trim().ToLowerInvariant(),"coaching",product.Slug,product.Title,product.Price,mepsCurrency,"pending","meps","",DateTime.UtcNow,null,null,""); await repository.CreatePaymentAsync(payment,cancellationToken);
         var frontend=(configuration["Frontend:BaseUrl"] ?? "http://localhost:5174").TrimEnd('/'); var orderId=payment.Id.ToString("N");
         try
         {
-            var gatewaySession=await meps.InitiateCheckoutAsync(orderId,product.Price,product.Currency,product.Title,payment.CustomerEmail,payment.CustomerName,$"{frontend}/checkout/one-to-one-coaching?payment=meps-guest-return&paymentId={payment.Id}",$"{frontend}/checkout/one-to-one-coaching?payment=cancelled&paymentId={payment.Id}",cancellationToken);
+            var gatewaySession=await meps.InitiateCheckoutAsync(orderId,payment.Amount,payment.Currency,product.Title,payment.CustomerEmail,payment.CustomerName,$"{frontend}/checkout/one-to-one-coaching?payment=meps-guest-return&paymentId={payment.Id}",$"{frontend}/checkout/one-to-one-coaching?payment=cancelled&paymentId={payment.Id}",cancellationToken);
             await repository.SetPaymentProviderReferenceAsync(payment.Id,$"{orderId}|{gatewaySession.SessionId}|{gatewaySession.SuccessIndicator}|{request.SessionId}",cancellationToken);
             return Ok(new { Success=true,Data=new CheckoutLaunch("meps",null,payment.Id,gatewaySession.SessionId,gatewaySession.CheckoutScriptUrl) });
         }

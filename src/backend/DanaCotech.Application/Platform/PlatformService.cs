@@ -146,7 +146,7 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
             offer.Title,
             offer.Description,
             offer.Price,
-            string.IsNullOrWhiteSpace(offer.Currency) ? "USD" : offer.Currency,
+            string.IsNullOrWhiteSpace(offer.Currency) ? "JOD" : offer.Currency,
             string.IsNullOrWhiteSpace(offer.Duration) ? "Self-paced" : offer.Duration,
             CreateModules(offer),
             offer.ImageUrl)).ToArray();
@@ -350,15 +350,15 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
         JourneyLesson L(string id, string en, string arTitle, string type = "video", int minutes = 15) => new(id, ar ? arTitle : en, type, minutes, "");
         JourneyModule M(string key, string en, string arTitle, params JourneyLesson[] lessons) => new(key, ar ? arTitle : en, ar ? "محتوى وتطبيقات عملية" : "Guided content and practical activities", lessons);
         return [
-            new JourneyProduct("career-clarity-program", "cohort", ar ? "برنامج وضوح المسار المهني" : "Career Clarity Program", ar ? "رحلة متكاملة لمدة خمسة أسابيع." : "A complete five-week guided journey.", 249, "USD", ar ? "5 أسابيع" : "5 weeks", [
+            new JourneyProduct("career-clarity-program", "cohort", ar ? "برنامج وضوح المسار المهني" : "Career Clarity Program", ar ? "رحلة متكاملة لمدة خمسة أسابيع." : "A complete five-week guided journey.", 249, "JOD", ar ? "5 أسابيع" : "5 weeks", [
                 M("week-1", "Stage 1 · Character strengths", "المرحلة 1 · نقاط القوة", L("strengths-intro", "Dana's introduction to character strengths", "مقدمة دانا لنقاط القوة"), L("strengths-assessment", "VIA strengths assessment and five result videos", "اختبار VIA وفيديوهات النتائج الخمس", "assessment", 20)),
                 M("week-2", "Stage 2 · Career interests", "المرحلة 2 · الميول المهنية", L("interests-intro", "Dana's introduction to RIASEC", "مقدمة دانا للميول المهنية"), L("interests-assessment", "72-activity RIASEC assessment", "تقييم RIASEC المكوّن من 72 نشاطاً", "assessment")),
                 M("week-3", "Stage 3 · Career values", "المرحلة 3 · القيم المهنية", L("values-intro", "Dana's introduction to career values", "مقدمة دانا للقيم المهنية"), L("values-assessment", "54-value career assessment", "تقييم القيم المهنية الـ54", "assessment")),
                 M("week-4", "Stage 4 · Life purpose", "المرحلة 4 · غاية الحياة", L("purpose-intro", "Dana's introduction to life purpose", "مقدمة دانا لغاية الحياة"), L("purpose-assessment", "Life Purpose guided exercise", "تمرين غاية الحياة الموجّه", "assessment")),
                 M("week-5", "Stage 5 · Career Profile and 1:1", "المرحلة 5 · الملف المهني والجلسة", L("career-identity", "Dana reviews your Career Profile", "مراجعة دانا لملفك المهني"), L("one-to-one", "Book your included 1:1 session", "احجز جلستك الفردية المشمولة", "booking", 30))
             ]),
-            new JourneyProduct("one-to-one-coaching", "coaching", ar ? "جلسة استشارية فردية" : "1:1 Coaching Session", ar ? "جلسة مركزة حسب احتياجك." : "A focused session built around your goal.", 75, "USD", "60 min", []),
-            new JourneyProduct("career-survival-library", "library", ar ? "مكتبة النجاة المهنية" : "Career Survival Library", ar ? "دروس عملية مسجلة لمواقف العمل." : "Practical recorded lessons for real workplace challenges.", 99, "USD", ar ? "تعلم ذاتي" : "Self-paced", [
+            new JourneyProduct("one-to-one-coaching", "coaching", ar ? "جلسة استشارية فردية" : "1:1 Coaching Session", ar ? "جلسة مركزة حسب احتياجك." : "A focused session built around your goal.", 75, "JOD", "60 min", []),
+            new JourneyProduct("career-survival-library", "library", ar ? "مكتبة النجاة المهنية" : "Career Survival Library", ar ? "دروس عملية مسجلة لمواقف العمل." : "Practical recorded lessons for real workplace challenges.", 99, "JOD", ar ? "تعلم ذاتي" : "Self-paced", [
                 M("library", "Career Survival Library", "مكتبة النجاة المهنية", L("bad-bosses", "Dealing with difficult managers", "التعامل مع المدراء الصعبين"), L("salary", "Salary negotiation", "التفاوض على الراتب"), L("job-search", "A smarter job search", "بحث أذكى عن وظيفة"), L("workplace", "Workplace decisions", "قرارات بيئة العمل"))
             ])
         ];

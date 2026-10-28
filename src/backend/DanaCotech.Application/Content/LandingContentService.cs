@@ -132,7 +132,7 @@ public sealed class LandingContentService(ILandingContentRepository repository) 
             language == "ar" ? "أدخل بياناتك للبدء" : "Enter your details to get started",
             language == "ar" ? "الاسم الكامل" : "Full name", language == "ar" ? "البريد الإلكتروني" : "Email address",
             language == "ar" ? "بيانات البطاقة" : "Card details", language == "ar" ? "ادفع والتحق الآن" : "Pay and enroll now",
-            language == "ar" ? "دفع آمن ومشفّر" : "Secure encrypted payment", [], type, price, "USD",
+            language == "ar" ? "دفع آمن ومشفّر" : "Secure encrypted payment", [], type, price, "JOD",
             language == "ar" ? arDuration : enDuration, true, sortOrder, []);
         return [
             Offer("career-clarity-program", "cohort", 249, "5 weeks", "5 أسابيع", 1, "Career Clarity Program", "برنامج وضوح المسار المهني", "A guided five-week journey to build your career identity and next steps.", "رحلة موجهة من خمسة أسابيع لبناء هويتك المهنية وخطواتك القادمة."),
