@@ -115,4 +115,4 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
         run: |
           PORT="${VPS_PORT:-22}"
-          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "sudo systemctl restart danacotech-backend && sleep 3 && curl --fail --silent http://127.0.0.1:5115/health"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "sudo systemctl restart danacotech-backend.service && sleep 3 && curl --fail --silent http://127.0.0.1:5115/health"
