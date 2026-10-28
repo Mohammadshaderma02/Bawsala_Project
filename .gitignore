@@ -17,14 +17,7 @@
 Thumbs.db
 ~$*
 
-# Runtime configuration and secrets
-**/appsettings.json
-**/appsettings.Development.json
-**/appsettings.Production.json
-**/.env
-**/.env.*
-!**/.env.example
-!**/appsettings.example.json
+
 
 # Publish output and local logs
 publish/
