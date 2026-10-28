@@ -64,6 +64,22 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseExceptionHandler(errorApplication =>
+{
+    errorApplication.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://www.bawsala1.com/problems/internal-server-error",
+            title = "An unexpected server error occurred.",
+            status = StatusCodes.Status500InternalServerError,
+            traceId = context.TraceIdentifier
+        });
+    });
+});
+
 app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())

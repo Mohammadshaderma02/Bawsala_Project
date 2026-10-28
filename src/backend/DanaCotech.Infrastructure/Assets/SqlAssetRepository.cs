@@ -15,7 +15,9 @@ public sealed class SqlAssetRepository(ISqlConnectionFactory connectionFactory) 
             MERGE dbo.Assets AS target
             USING (SELECT @AssetKey AS AssetKey) AS source ON target.AssetKey = source.AssetKey
             WHEN MATCHED THEN UPDATE SET FileName=@FileName, MimeType=@MimeType, Base64Content=@Base64Content, AltEn=@AltText, AltAr=@AltText, IsActive=1
-            WHEN NOT MATCHED THEN INSERT (AssetKey, FileName, MimeType, Base64Content, AltEn, AltAr) VALUES (@AssetKey, @FileName, @MimeType, @Base64Content, @AltText, @AltText);
+            WHEN NOT MATCHED THEN
+                INSERT (AssetKey, FileName, MimeType, Base64Content, AltEn, AltAr, IsActive, CreatedAtUtc)
+                VALUES (@AssetKey, @FileName, @MimeType, @Base64Content, @AltText, @AltText, 1, SYSUTCDATETIME());
             """, connection);
         command.Parameters.AddWithValue("@AssetKey", asset.AssetKey);
         command.Parameters.AddWithValue("@FileName", (object?)asset.FileName ?? DBNull.Value);
