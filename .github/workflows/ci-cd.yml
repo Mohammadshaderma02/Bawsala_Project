@@ -97,7 +97,7 @@ jobs:
           chmod 600 ~/.ssh/bawsala_deploy
           ssh-keyscan -p "${VPS_PORT:-22}" -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload atomic release
+      - name: Sync release files to VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
