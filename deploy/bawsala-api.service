@@ -3,12 +3,12 @@ Description=Bawsala ASP.NET Core API
 After=network.target
 
 [Service]
-WorkingDirectory=/var/www/bawsala/current/api
-ExecStart=/usr/bin/dotnet /var/www/bawsala/current/api/DanaCotech.Api.dll
+WorkingDirectory=/var/www/project/backend
+ExecStart=/usr/bin/dotnet /var/www/project/backend/DanaCotech.Api.dll
 Restart=always
 RestartSec=5
 KillSignal=SIGINT
-SyslogIdentifier=bawsala-api
+SyslogIdentifier=danacotech-backend
 User=www-data
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://127.0.0.1:5115

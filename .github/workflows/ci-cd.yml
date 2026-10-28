@@ -102,24 +102,17 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
-          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           PORT="${VPS_PORT:-22}"
-          ROOT="${DEPLOY_PATH:-/var/www/bawsala}"
-          RELEASE="$ROOT/releases/${GITHUB_SHA}"
-          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '$RELEASE/api' '$RELEASE/web'"
-          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/api/ "$VPS_USER@$VPS_HOST:$RELEASE/api/"
-          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/web/ "$VPS_USER@$VPS_HOST:$RELEASE/web/"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '/var/www/project/backend' '/var/www/project/frontend/dist'"
+          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/api/ "$VPS_USER@$VPS_HOST:/var/www/project/backend/"
+          rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/web/ "$VPS_USER@$VPS_HOST:/var/www/project/frontend/dist/"
 
-      - name: Activate release and health check
+      - name: Restart backend and health check
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
-          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          API_SERVICE: ${{ vars.API_SERVICE_NAME }}
         run: |
           PORT="${VPS_PORT:-22}"
-          ROOT="${DEPLOY_PATH:-/var/www/bawsala}"
-          SERVICE="${API_SERVICE:-bawsala-api}"
-          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "ln -sfn '$ROOT/releases/${GITHUB_SHA}' '$ROOT/current' && sudo systemctl restart '$SERVICE' && sleep 3 && curl --fail --silent http://127.0.0.1:5115/health"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "sudo systemctl restart danacotech-backend && sleep 3 && curl --fail --silent http://127.0.0.1:5115/health"
