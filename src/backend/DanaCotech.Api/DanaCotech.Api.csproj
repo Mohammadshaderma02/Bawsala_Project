@@ -15,4 +15,11 @@
     <ProjectReference Include="..\DanaCotech.Infrastructure\DanaCotech.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\..\database\*.sql" Link="DatabaseMigrations\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

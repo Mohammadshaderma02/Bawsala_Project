@@ -1,3 +1,5 @@
+IF OBJECT_ID(N'dbo.Assets', N'U') IS NULL
+BEGIN
 CREATE TABLE dbo.Assets
 (
     Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Assets PRIMARY KEY,
@@ -13,3 +15,4 @@ CREATE TABLE dbo.Assets
 
 CREATE INDEX IX_Assets_AssetKey_IsActive
 ON dbo.Assets(AssetKey, IsActive);
+END;

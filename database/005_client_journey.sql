@@ -1,3 +1,5 @@
+IF OBJECT_ID(N'dbo.ClientAccounts', N'U') IS NULL
+BEGIN
 CREATE TABLE dbo.ClientAccounts
 (
     Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_ClientAccounts PRIMARY KEY,
@@ -8,7 +10,10 @@ CREATE TABLE dbo.ClientAccounts
     CreatedAtUtc DATETIME2 NOT NULL CONSTRAINT DF_ClientAccounts_CreatedAtUtc DEFAULT SYSUTCDATETIME(),
     CONSTRAINT UQ_ClientAccounts_Email UNIQUE (Email)
 );
+END;
 
+IF OBJECT_ID(N'dbo.ClientJourneyStates', N'U') IS NULL
+BEGIN
 CREATE TABLE dbo.ClientJourneyStates
 (
     UserId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_ClientJourneyStates PRIMARY KEY,
@@ -17,3 +22,4 @@ CREATE TABLE dbo.ClientJourneyStates
     CONSTRAINT FK_ClientJourneyStates_ClientAccounts FOREIGN KEY (UserId) REFERENCES dbo.ClientAccounts(Id),
     CONSTRAINT CK_ClientJourneyStates_StateJson_IsJson CHECK (ISJSON(StateJson) = 1)
 );
+END;

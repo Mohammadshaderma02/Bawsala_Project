@@ -1,3 +1,5 @@
+IF OBJECT_ID(N'dbo.LandingPages', N'U') IS NULL
+BEGIN
 CREATE TABLE dbo.LandingPages
 (
     Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_LandingPages PRIMARY KEY,
@@ -11,4 +13,4 @@ CREATE TABLE dbo.LandingPages
 
 CREATE INDEX IX_LandingPages_LanguageCode_IsPublished_UpdatedAtUtc
 ON dbo.LandingPages(LanguageCode, IsPublished, UpdatedAtUtc DESC);
-
+END;

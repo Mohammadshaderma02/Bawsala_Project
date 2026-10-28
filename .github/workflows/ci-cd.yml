@@ -83,6 +83,13 @@ jobs:
           name: bawsala-release
           path: release
 
+      - name: Create protected production configuration
+        env:
+          PRODUCTION_APPSETTINGS_JSON: ${{ secrets.PRODUCTION_APPSETTINGS_JSON }}
+        run: |
+          test -n "$PRODUCTION_APPSETTINGS_JSON"
+          printf '%s' "$PRODUCTION_APPSETTINGS_JSON" | jq -e . > release/api/appsettings.json
+
       - name: Configure SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -107,6 +114,15 @@ jobs:
           ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "mkdir -p '/var/www/project/backend' '/var/www/project/frontend/dist'"
           rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/api/ "$VPS_USER@$VPS_HOST:/var/www/project/backend/"
           rsync -az --delete -e "ssh -i ~/.ssh/bawsala_deploy -p $PORT" release/web/ "$VPS_USER@$VPS_HOST:/var/www/project/frontend/dist/"
+
+      - name: Apply database migrations
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT }}
+        run: |
+          PORT="${VPS_PORT:-22}"
+          ssh -i ~/.ssh/bawsala_deploy -p "$PORT" "$VPS_USER@$VPS_HOST" "chmod 600 /var/www/project/backend/appsettings.json && cd /var/www/project/backend && /usr/bin/dotnet DanaCotech.Api.dll --migrate-database"
 
       - name: Restart backend and health check
         env:

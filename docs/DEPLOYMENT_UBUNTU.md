@@ -46,6 +46,7 @@ Create a private GitHub repository and add these Actions secrets under Settings,
 - `VPS_USER`: non-root deployment user.
 - `VPS_SSH_PRIVATE_KEY`: private key matching the public key installed for the deployment user.
 - `VPS_SSH_PORT`: optional, defaults to `22`.
+- `PRODUCTION_APPSETTINGS_JSON`: the complete production `appsettings.json` document. It must include a SQL Server connection string at `ConnectionStrings:DanaCotechDb` and all production authentication, payment, email, and calendar secrets.
 
 Add these repository variables:
 
@@ -59,8 +60,10 @@ The deployment user must be permitted to restart only the Bawsala service withou
 - Pushes to `main` build the same verified artifact.
 - The verified frontend artifact is synchronized to `/var/www/project/frontend/dist`.
 - The verified backend artifact is synchronized to `/var/www/project/backend`.
+- The production configuration is created from the protected GitHub secret after the build artifact is downloaded; it is never committed or uploaded as a build artifact.
+- Numbered scripts from `database/` are applied transactionally in filename order. Successful scripts are recorded in `dbo.SchemaMigrations` and are not run twice.
 - systemd restarts the API and the workflow checks the local health endpoint.
 
-Real application secrets stay only in `/etc/bawsala/bawsala.env` and never enter GitHub source control or build artifacts.
+Real application secrets stay in GitHub Actions secrets and the protected server configuration; they never enter GitHub source control or uploaded build artifacts.
 
 Large videos are deliberately excluded from the Git repository and deployment artifact. Manage them through the Admin media library or a dedicated object-storage/CDN service so normal code deployments remain fast.

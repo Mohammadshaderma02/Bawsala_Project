@@ -3,9 +3,23 @@ using DanaCotech.Infrastructure;
 using DanaCotech.Api.Security;
 using System.Threading.RateLimiting;
 using DanaCotech.Api.Services;
+using DanaCotech.Infrastructure.Data;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (args.Contains("--migrate-database", StringComparer.OrdinalIgnoreCase))
+{
+    var connectionString = builder.Configuration.GetConnectionString("DanaCotechDb");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("ConnectionStrings:DanaCotechDb is required to run database migrations.");
+    }
+
+    var migrationsPath = Path.Combine(builder.Environment.ContentRootPath, "DatabaseMigrations");
+    await DatabaseMigrationRunner.RunAsync(connectionString, migrationsPath);
+    return;
+}
 
 const string frontendPolicy = "Frontend";
 
