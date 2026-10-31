@@ -1,88 +1,237 @@
-using System.Net;
-using System.Net.Mail;
-using System.Text.Json;
 using DanaCotech.Infrastructure.Data;
 using Microsoft.Data.SqlClient;
 
 namespace DanaCotech.Api.Services;
 
-public sealed class NotificationOutboxWorker(IServiceScopeFactory scopeFactory, IConfiguration configuration, ILogger<NotificationOutboxWorker> logger) : BackgroundService
+public sealed class NotificationOutboxWorker(
+    IServiceScopeFactory scopeFactory,
+    IConfiguration configuration,
+    EmailNotificationSender emailSender,
+    GoogleCalendarClient calendarClient,
+    ILogger<NotificationOutboxWorker> logger) : BackgroundService
 {
+    private const int BatchSize = 10;
+    private const int MaxAttempts = 5;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            try { if (configuration.GetValue<bool>("Email:Enabled")) await DispatchAsync(stoppingToken); if (configuration.GetValue<bool>("GoogleCalendar:Enabled")) await DispatchCalendarAsync(stoppingToken); }
-            catch (Exception exception) { logger.LogError(exception, "Notification outbox dispatch failed"); }
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            try
+            {
+                // Calendar is dispatched first so a newly-created Meet link can be included in the confirmation email.
+                if (configuration.GetValue<bool>("GoogleCalendar:Enabled"))
+                    await DispatchAsync("calendar", stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Google Calendar outbox dispatch failed");
+            }
+
+            try
+            {
+                if (configuration.GetValue<bool>("Email:Enabled"))
+                    await DispatchAsync("email", stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Email outbox dispatch failed");
+            }
+
+            try { await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
         }
     }
 
-    private async Task DispatchAsync(CancellationToken cancellationToken)
+    private async Task DispatchAsync(string channel, CancellationToken cancellationToken)
     {
-        using var scope = scopeFactory.CreateScope(); var factory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
-        await using var connection = factory.CreateConnection(); await connection.OpenAsync(cancellationToken);
-        var rows = new List<(long Id, string Email, string Name, string Template, string Payload)>();
-        await using (var command = new SqlCommand("""
-            SELECT TOP (10) n.Id,a.Email,a.Name,n.TemplateKey,n.PayloadJson
-            FROM dbo.NotificationOutbox n JOIN dbo.ClientAccounts a ON a.Id=n.UserId
-            WHERE n.Status=N'pending' AND n.Channel=N'email' AND n.Attempts < 5 ORDER BY n.CreatedAtUtc
-            """, connection))
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken)) while (await reader.ReadAsync(cancellationToken)) rows.Add((reader.GetInt64(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4)));
-        foreach (var row in rows)
-        {
-            try { await SendAsync(row.Email, row.Name, row.Template, row.Payload, cancellationToken); await MarkAsync(connection, row.Id, true, null, cancellationToken); }
-            catch (Exception exception) { await MarkAsync(connection, row.Id, false, exception.Message, cancellationToken); }
-        }
-    }
+        using var scope = scopeFactory.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
+        await using var connection = factory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
 
-    private async Task SendAsync(string email, string name, string template, string payload, CancellationToken cancellationToken)
-    {
-        var host = configuration["Email:SmtpHost"] ?? throw new InvalidOperationException("Email:SmtpHost is missing"); var port = configuration.GetValue("Email:SmtpPort", 587);
-        using var client = new SmtpClient(host, port) { EnableSsl = configuration.GetValue("Email:EnableSsl", true), Credentials = new NetworkCredential(configuration["Email:Username"], configuration["Email:Password"]) };
-        var from = configuration["Email:FromAddress"] ?? configuration["Email:Username"] ?? throw new InvalidOperationException("Email:FromAddress is missing");
-        using var message = new MailMessage(from, email) { Subject = Subject(template), IsBodyHtml = true, Body = Body(name, template, payload) };
-        await client.SendMailAsync(message, cancellationToken);
-    }
-
-    private async Task DispatchCalendarAsync(CancellationToken cancellationToken)
-    {
-        using var scope = scopeFactory.CreateScope(); var factory = scope.ServiceProvider.GetRequiredService<ISqlConnectionFactory>();
-        await using var connection = factory.CreateConnection(); await connection.OpenAsync(cancellationToken);
-        var rows = new List<(long Id, string Email, string Payload)>();
-        await using (var command = new SqlCommand("SELECT TOP (10) n.Id,a.Email,n.PayloadJson FROM dbo.NotificationOutbox n JOIN dbo.ClientAccounts a ON a.Id=n.UserId WHERE n.Status=N'pending' AND n.Channel=N'calendar' AND n.Attempts<5 ORDER BY n.CreatedAtUtc", connection))
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken)) while (await reader.ReadAsync(cancellationToken)) rows.Add((reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
+        var rows = await ClaimAsync(connection, channel, cancellationToken);
         foreach (var row in rows)
         {
             try
             {
-                using var payload = JsonDocument.Parse(row.Payload); var root = payload.RootElement; var start = root.GetProperty("startsAtUtc").GetDateTime(); var end = root.TryGetProperty("endAtUtc", out var endValue) || root.TryGetProperty("endsAtUtc", out endValue) ? endValue.GetDateTime() : start.AddHours(1);
-                var body = JsonSerializer.Serialize(new { summary = "Career session with Dana", description = "Dana Gharaibeh Career Platform session", start = new { dateTime = start.ToString("O"), timeZone = "Asia/Amman" }, end = new { dateTime = end.ToString("O"), timeZone = "Asia/Amman" }, attendees = new[] { new { email = row.Email } }, conferenceData = new { createRequest = new { requestId = Guid.NewGuid().ToString("N"), conferenceSolutionKey = new { type = "hangoutsMeet" } } } });
-                var calendarId = Uri.EscapeDataString(configuration["GoogleCalendar:CalendarId"] ?? "primary"); using var request = new HttpRequestMessage(HttpMethod.Post, $"https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events?conferenceDataVersion=1&sendUpdates=all"); request.Headers.Authorization = new("Bearer", configuration["GoogleCalendar:AccessToken"]); request.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
-                using var response = await new HttpClient().SendAsync(request, cancellationToken); var result = await response.Content.ReadAsStringAsync(cancellationToken); if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"Google Calendar returned {(int)response.StatusCode}: {result}");
-                using var resultJson = JsonDocument.Parse(result); var reference = resultJson.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null; await MarkCalendarAsync(connection, row.Id, true, reference, null, cancellationToken);
+                string? providerReference = null;
+                if (channel == "email")
+                {
+                    await emailSender.SendAsync(row.Email, row.Name, row.Template, row.Payload, cancellationToken);
+                }
+                else
+                {
+                    var calendarEvent = await calendarClient.CreateEventAsync(row.Id, row.Email, row.Name, row.Payload, cancellationToken);
+                    using var payload = new OutboxPayload(row.Payload);
+                    var bookingId = payload.GetGuid("id", "bookingId");
+                    var meetingUrl = calendarEvent.MeetingUrl ?? payload.GetString("meetingUrl");
+                    if (bookingId is Guid id)
+                        await SaveCalendarDetailsAsync(connection, row.UserId, id, calendarEvent.EventId, meetingUrl, cancellationToken);
+                    providerReference = calendarEvent.EventId;
+                }
+
+                await MarkAsync(connection, row.Id, true, providerReference, null, cancellationToken);
             }
-            catch (Exception exception) { await MarkCalendarAsync(connection, row.Id, false, null, exception.Message, cancellationToken); }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Outbox item {OutboxId} failed on channel {Channel}", row.Id, channel);
+                await MarkAsync(connection, row.Id, false, null, exception.Message, cancellationToken);
+            }
         }
     }
 
-    private static string Subject(string key) => key switch { "email-verification" => "Verify your Dana Career Platform account", "password-reset" => "Reset your password", "career-profile-ready" => "Your Career Clarity Profile is ready", "booking-confirmation" => "Your session is confirmed", "payment-refunded" => "Your refund is confirmed", _ => "Dana Career Platform update" };
-    private static string Body(string name, string template, string payload)
+    private static async Task<IReadOnlyCollection<OutboxItem>> ClaimAsync(SqlConnection connection, string channel, CancellationToken cancellationToken)
     {
-        using var document = JsonDocument.Parse(payload); string? Link(params string[] keys) { foreach (var key in keys) if (document.RootElement.TryGetProperty(key, out var value)) return value.ToString(); return null; }
-        var link = Link("verificationUrl", "resetUrl", "meetingUrl"); var action = string.IsNullOrWhiteSpace(link) ? "" : $"<p><a style='background:#20295b;color:white;padding:12px 20px;text-decoration:none;border-radius:8px' href='{WebUtility.HtmlEncode(link)}'>Open secure link</a></p>";
-        return $"<div style='font-family:Arial;max-width:620px;margin:auto;padding:32px'><h2 style='color:#20295b'>Dana Gharaibeh Career Platform</h2><p>Hello {WebUtility.HtmlEncode(name)},</p><p>{WebUtility.HtmlEncode(Subject(template))}.</p>{action}<p style='color:#667085'>If you did not request this message, you can safely ignore it.</p></div>";
+        var items = new List<OutboxItem>();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        await using (var command = new SqlCommand("""
+            SET XACT_ABORT ON;
+
+            UPDATE dbo.NotificationOutbox
+            SET Status = CASE WHEN Attempts >= @MaxAttempts THEN N'failed' ELSE N'pending' END,
+                ClaimedAtUtc = NULL,
+                LastError = CASE WHEN Attempts >= @MaxAttempts THEN N'Delivery lease expired after the final attempt.' ELSE LastError END
+            WHERE Status = N'processing'
+              AND ClaimedAtUtc < DATEADD(MINUTE, -10, SYSUTCDATETIME());
+
+            DECLARE @Claimed TABLE
+            (
+                Id BIGINT NOT NULL,
+                UserId UNIQUEIDENTIFIER NOT NULL,
+                TemplateKey NVARCHAR(120) NOT NULL,
+                PayloadJson NVARCHAR(MAX) NOT NULL
+            );
+
+            ;WITH CandidateRows AS
+            (
+                SELECT TOP (@BatchSize) Id
+                FROM dbo.NotificationOutbox WITH (UPDLOCK, READPAST, ROWLOCK)
+                WHERE Channel = @Channel
+                  AND Status = N'pending'
+                  AND Attempts < @MaxAttempts
+                ORDER BY CreatedAtUtc, Id
+            )
+            UPDATE outbox
+            SET Status = N'processing',
+                Attempts = Attempts + 1,
+                ClaimedAtUtc = SYSUTCDATETIME()
+            OUTPUT inserted.Id, inserted.UserId, inserted.TemplateKey, inserted.PayloadJson
+                INTO @Claimed (Id, UserId, TemplateKey, PayloadJson)
+            FROM dbo.NotificationOutbox AS outbox
+            INNER JOIN CandidateRows AS candidate ON candidate.Id = outbox.Id;
+
+            SELECT claimed.Id, claimed.UserId, account.Email, account.Name, claimed.TemplateKey, claimed.PayloadJson
+            FROM @Claimed AS claimed
+            INNER JOIN dbo.ClientAccounts AS account ON account.Id = claimed.UserId
+            ORDER BY claimed.Id;
+            """, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@Channel", channel);
+            command.Parameters.AddWithValue("@BatchSize", BatchSize);
+            command.Parameters.AddWithValue("@MaxAttempts", MaxAttempts);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                items.Add(new OutboxItem(
+                    reader.GetInt64(0),
+                    reader.GetGuid(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetString(4),
+                    reader.GetString(5)));
+            }
+        }
+        await transaction.CommitAsync(cancellationToken);
+        return items;
     }
 
-    private static async Task MarkAsync(SqlConnection connection, long id, bool sent, string? error, CancellationToken cancellationToken)
+    private static async Task SaveCalendarDetailsAsync(
+        SqlConnection connection,
+        Guid userId,
+        Guid bookingId,
+        string eventId,
+        string? meetingUrl,
+        CancellationToken cancellationToken)
     {
-        await using var command = new SqlCommand("UPDATE dbo.NotificationOutbox SET Status=@Status,Attempts=Attempts+1,SentAtUtc=CASE WHEN @Sent=1 THEN SYSUTCDATETIME() ELSE SentAtUtc END,LastError=@Error WHERE Id=@Id", connection);
-        command.Parameters.AddWithValue("@Id", id); command.Parameters.AddWithValue("@Status", sent ? "sent" : "pending"); command.Parameters.AddWithValue("@Sent", sent); command.Parameters.AddWithValue("@Error", (object?)error ?? DBNull.Value); await command.ExecuteNonQueryAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            UPDATE dbo.SessionBookings
+            SET ExternalCalendarEventId = @EventId,
+                MeetingUrl = COALESCE(NULLIF(@MeetingUrl, N''), MeetingUrl)
+            WHERE UserId = @UserId AND (Id = @BookingId OR SessionId = @BookingId);
+
+            IF @MeetingUrl IS NOT NULL AND @MeetingUrl <> N''
+            BEGIN
+                DECLARE @BookingIndex INT;
+                SELECT TOP (1) @BookingIndex = TRY_CONVERT(INT, booking.[key])
+                FROM dbo.ClientJourneyStates AS journey
+                CROSS APPLY OPENJSON(journey.StateJson, '$.bookings') AS booking
+                WHERE journey.UserId = @UserId
+                  AND TRY_CONVERT(UNIQUEIDENTIFIER, COALESCE(JSON_VALUE(booking.value, '$.id'), JSON_VALUE(booking.value, '$.Id'))) = @BookingId;
+
+                IF @BookingIndex IS NOT NULL
+                BEGIN
+                    UPDATE dbo.ClientJourneyStates
+                    SET StateJson = JSON_MODIFY(StateJson, CONCAT('$.bookings[', @BookingIndex, '].meetingUrl'), @MeetingUrl),
+                        UpdatedAtUtc = SYSUTCDATETIME()
+                    WHERE UserId = @UserId;
+                END;
+
+                UPDATE dbo.NotificationOutbox
+                SET PayloadJson = JSON_MODIFY(PayloadJson, '$.MeetingUrl', @MeetingUrl)
+                WHERE UserId = @UserId
+                  AND Channel = N'email'
+                  AND TemplateKey = N'booking-confirmation'
+                  AND Status = N'pending'
+                  AND TRY_CONVERT(UNIQUEIDENTIFIER, COALESCE(JSON_VALUE(PayloadJson, '$.Id'), JSON_VALUE(PayloadJson, '$.id'), JSON_VALUE(PayloadJson, '$.BookingId'), JSON_VALUE(PayloadJson, '$.bookingId'), JSON_VALUE(PayloadJson, '$.SessionId'), JSON_VALUE(PayloadJson, '$.sessionId'))) = @BookingId;
+            END;
+            """, connection, transaction);
+        command.Parameters.AddWithValue("@UserId", userId);
+        command.Parameters.AddWithValue("@BookingId", bookingId);
+        command.Parameters.AddWithValue("@EventId", eventId);
+        command.Parameters.AddWithValue("@MeetingUrl", (object?)meetingUrl ?? DBNull.Value);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
-    private static async Task MarkCalendarAsync(SqlConnection connection, long id, bool sent, string? reference, string? error, CancellationToken cancellationToken)
+    private static async Task MarkAsync(
+        SqlConnection connection,
+        long id,
+        bool sent,
+        string? providerReference,
+        string? error,
+        CancellationToken cancellationToken)
     {
-        await using var command = new SqlCommand("UPDATE dbo.NotificationOutbox SET Status=@Status,Attempts=Attempts+1,ProviderReference=@Reference,SentAtUtc=CASE WHEN @Sent=1 THEN SYSUTCDATETIME() ELSE SentAtUtc END,LastError=@Error WHERE Id=@Id", connection);
-        command.Parameters.AddWithValue("@Id", id); command.Parameters.AddWithValue("@Status", sent ? "sent" : "pending"); command.Parameters.AddWithValue("@Sent", sent); command.Parameters.AddWithValue("@Reference", (object?)reference ?? DBNull.Value); command.Parameters.AddWithValue("@Error", (object?)error ?? DBNull.Value); await command.ExecuteNonQueryAsync(cancellationToken);
+        const string sql = """
+            UPDATE dbo.NotificationOutbox
+            SET Status = CASE WHEN @Sent = 1 THEN N'sent' WHEN Attempts >= @MaxAttempts THEN N'failed' ELSE N'pending' END,
+                ProviderReference = COALESCE(@Reference, ProviderReference),
+                ClaimedAtUtc = NULL,
+                SentAtUtc = CASE WHEN @Sent = 1 THEN SYSUTCDATETIME() ELSE SentAtUtc END,
+                LastError = CASE WHEN @Sent = 1 THEN NULL ELSE LEFT(@Error, 2000) END
+            WHERE Id = @Id AND Status = N'processing';
+            """;
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@Id", id);
+        command.Parameters.AddWithValue("@Sent", sent);
+        command.Parameters.AddWithValue("@MaxAttempts", MaxAttempts);
+        command.Parameters.AddWithValue("@Reference", (object?)providerReference ?? DBNull.Value);
+        command.Parameters.AddWithValue("@Error", (object?)error ?? DBNull.Value);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    private sealed record OutboxItem(long Id, Guid UserId, string Email, string Name, string Template, string Payload);
 }

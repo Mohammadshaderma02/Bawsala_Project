@@ -21,6 +21,11 @@ database/005_client_journey.sql
 database/006_user_roles.sql
 database/007_client_journey_operations.sql
 database/008_password_resets.sql
+database/009_payment_transactions.sql
+database/010_email_verification.sql
+database/011_assets_defaults.sql
+database/012_meps_jod_currency.sql
+database/013_notification_outbox_delivery.sql
 ```
 
 Then set the connection string in `src/backend/DanaCotech.Api/appsettings.json`:
@@ -81,6 +86,33 @@ Run `database/008_password_resets.sql` before using this feature. Reset emails a
 `dbo.NotificationOutbox` with the `password-reset` template key. Development exposes the generated
 link in the API response for local testing; production does not.
 
+## Email notifications and Google Calendar
+
+Booking, enrollment, verification, password-reset, career-profile, and refund notifications are
+queued in `dbo.NotificationOutbox`. The API worker delivers email over SMTP and creates Google
+Calendar events for booked sessions. Calendar invitations are sent to the client; Meet links are
+created when `GoogleCalendar:CreateMeetLink` is enabled and the configured calendar supports them.
+
+Configure credentials through protected environment variables, never in source control:
+
+- Email: `Email__Enabled`, `Email__SmtpHost`, `Email__SmtpPort`, `Email__EnableSsl`,
+  `Email__Username`, `Email__Password`, `Email__FromAddress`, and `Email__FromName`.
+- Google Calendar: `GoogleCalendar__Enabled`, `GoogleCalendar__CalendarId`,
+  `GoogleCalendar__ClientId`, `GoogleCalendar__ClientSecret`, `GoogleCalendar__RefreshToken`,
+  `GoogleCalendar__TimeZone`, and `GoogleCalendar__CreateMeetLink`.
+
+For Gmail SMTP, use an app password for the sending account. For Google Calendar, enable the Calendar
+API in a Google Cloud project and authorize the calendar owner with offline access to the
+`https://www.googleapis.com/auth/calendar.events` scope. The worker refreshes the short-lived access
+token using the saved refresh token. See the [Google OAuth refresh-token guide](https://developers.google.com/identity/protocols/oauth2/web-server),
+[Calendar event insert reference](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert),
+and [Gmail app-password help](https://support.google.com/accounts/answer/185833).
+
+Copy the corresponding values from `deploy/bawsala.env.example` into `/etc/bawsala/bawsala.env`
+or the protected `PRODUCTION_APPSETTINGS_JSON` GitHub secret. The outbox uses bounded retries and
+idempotent Calendar event IDs; run the migration scripts through `--migrate-database` before
+starting the updated API.
+
 ## Client Journey
 
 The integrated client MVP includes:
@@ -94,8 +126,8 @@ The integrated client MVP includes:
 - `/booking` — coaching and cohort session booking
 
 Run `database/005_client_journey.sql` before using account and journey APIs with SQL Server.
-Checkout currently confirms a test enrollment. Production deployment still needs a payment provider,
-transactional email/calendar integration, real video URLs, and authentication protection for `/cms`.
+Checkout currently confirms a test enrollment. Production deployment still needs payment provider
+credentials, SMTP and Google OAuth credentials, real video URLs, and authentication protection for `/cms`.
 
 ## Course CMS
 

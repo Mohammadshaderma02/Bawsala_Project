@@ -8,10 +8,10 @@ Source: `Clients Journey.docx`
 | Three product choices | MVP implemented | Cohort, 1:1 coaching, and Career Survival Library catalog |
 | Payment | Foundation ready | Orders/payment references schema added; payment provider credentials still required |
 | 1:1 focus dropdown and booking calendar | MVP implemented | Focus and date/time selection; persistent operational booking schema added |
-| Email meeting request | Test-mode workflow | Email and calendar outbox records are created after booking; provider worker required |
+| Email meeting request | Implemented | Localized confirmation emails and Google Calendar invitations are dispatched through the retryable outbox; provider credentials required |
 | Career Survival video library | MVP implemented | Library modules exist; Admin-managed product/lesson UI and real video content remain |
 | Bundle and individual course pricing | Foundation ready | Parent product, bundle, course, and independent price schema added |
-| Cohort welcome email | Test-mode workflow | Welcome email outbox record is created after enrollment |
+| Cohort welcome email | Implemented | Localized enrollment confirmation email is dispatched through SMTP; credentials required |
 | WhatsApp/Discord group | Foundation ready | Cohort community type/link and notification channels added; provider/link configuration remains |
 | Kickoff session | Foundation ready | Cohorts and scheduled session schema added |
 | Client progress dashboard | Implemented | Enrollment, lesson progress, bookings, and career identity |
@@ -22,7 +22,7 @@ Source: `Clients Journey.docx`
 | Week 2 interests, values, purpose forms | MVP implemented | In-platform forms and stored results |
 | Auto-generated career identity | Implemented | Combines four assessment summaries and suggested paths |
 | Downloadable career identity | Pending | PDF/document generation endpoint and template required |
-| Week 3 30-minute 1:1 | MVP implemented | Booking exists; availability rules and real calendar provider remain |
+| Week 3 30-minute 1:1 | MVP implemented | Booking and Calendar invitation flow implemented; availability rules and provider credentials remain |
 | Week 4 career paths and CV template | Partial | Suggested paths exist; downloadable CV templates and upload flow remain |
 | LinkedIn/job-search live session | Foundation ready | Scheduled cohort session model added |
 | Interview live session | Foundation ready | Scheduled cohort session model added |
@@ -34,7 +34,7 @@ Source: `Clients Journey.docx`
 ## External configuration required
 
 - Payment provider and webhook credentials.
-- Transactional email provider and sender identity.
-- Google or Microsoft Calendar OAuth/application credentials.
+- Gmail SMTP app password and verified sender identity.
+- Google Calendar OAuth client ID, client secret, refresh token, calendar ID, and API access.
 - WhatsApp Business API or Discord integration details, if automatic group invitations are required.
 - Final video files, CV templates, assessment rules, and downloadable career-identity design.

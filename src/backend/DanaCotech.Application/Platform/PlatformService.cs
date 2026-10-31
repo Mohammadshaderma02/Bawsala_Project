@@ -276,10 +276,11 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
     {
         if (startsAtUtc <= DateTime.UtcNow) return ServiceResponse<JourneySnapshot>.Fail("Choose a future appointment");
         var state = await repository.GetJourneyAsync(userId, cancellationToken);
-        var booking = new ClientBooking(Guid.NewGuid(), sessionType, startsAtUtc, "confirmed", $"https://meet.google.com/dana-{Guid.NewGuid():N}"[..42]);
+        var booking = new ClientBooking(Guid.NewGuid(), sessionType, startsAtUtc, "confirmed", string.Empty);
         state.Bookings.Add(booking);
         await repository.SaveJourneyAsync(state, cancellationToken);
-        var notificationPayload = JsonSerializer.Serialize(new { booking.Id, sessionType, startsAtUtc, booking.MeetingUrl, language });
+        var endsAtUtc = startsAtUtc.AddHours(1);
+        var notificationPayload = JsonSerializer.Serialize(new { booking.Id, sessionType, startsAtUtc, endsAtUtc, booking.MeetingUrl, language });
         await repository.QueueNotificationAsync(userId, "email", "booking-confirmation", notificationPayload, cancellationToken);
         await repository.QueueNotificationAsync(userId, "calendar", "meeting-invitation", notificationPayload, cancellationToken);
         return await GetJourneyAsync(userId, language, cancellationToken);
@@ -304,7 +305,7 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
         var state = await repository.GetJourneyAsync(userId, cancellationToken);
         if (state.Bookings.All(item => item.Id != session.Id)) state.Bookings.Add(new ClientBooking(session.Id, session.SessionType, session.StartsAtUtc, "confirmed", session.MeetingUrl));
         await repository.SaveJourneyAsync(state, cancellationToken);
-        var payload = JsonSerializer.Serialize(new { session.Id, session.SessionType, session.StartsAtUtc, session.EndsAtUtc, session.MeetingUrl, language });
+        var payload = JsonSerializer.Serialize(new { session.Id, session.SessionType, session.TitleEn, session.TitleAr, session.StartsAtUtc, session.EndsAtUtc, session.MeetingUrl, language });
         await repository.QueueNotificationAsync(userId, "email", "booking-confirmation", payload, cancellationToken);
         await repository.QueueNotificationAsync(userId, "calendar", "meeting-invitation", payload, cancellationToken);
         return await GetJourneyAsync(userId, language, cancellationToken);

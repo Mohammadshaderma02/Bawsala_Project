@@ -113,7 +113,7 @@ public sealed class PaymentsController(IPlatformService platformService, IPlatfo
                 return Conflict(new { Success=false,PaymentReceived=true,PaymentId=payment.Id,Message="Payment was received, but the selected session is no longer available. Support has been notified to reschedule or refund it." });
             }
             var state=await repository.GetJourneyAsync(account.Id,cancellationToken); if(state.Bookings.All(item=>item.Id!=booked.Id)) state.Bookings.Add(new ClientBooking(booked.Id,booked.SessionType,booked.StartsAtUtc,"confirmed",booked.MeetingUrl)); await repository.SaveJourneyAsync(state,cancellationToken);
-            var payload=JsonSerializer.Serialize(new { booked.Id,booked.SessionType,booked.StartsAtUtc,booked.EndsAtUtc,booked.MeetingUrl,language }); await repository.QueueNotificationAsync(account.Id,"email","booking-confirmation",payload,cancellationToken); await repository.QueueNotificationAsync(account.Id,"calendar","meeting-invitation",payload,cancellationToken);
+            var payload=JsonSerializer.Serialize(new { booked.Id,booked.SessionType,booked.TitleEn,booked.TitleAr,booked.StartsAtUtc,booked.EndsAtUtc,booked.MeetingUrl,language }); await repository.QueueNotificationAsync(account.Id,"email","booking-confirmation",payload,cancellationToken); await repository.QueueNotificationAsync(account.Id,"calendar","meeting-invitation",payload,cancellationToken);
             return Ok(new { Success=true,Data=completed });
         }
         catch(MepsGatewayException exception) { return StatusCode(502,new { Success=false,Message=exception.Message,Detail=exception.GatewayResponse }); }

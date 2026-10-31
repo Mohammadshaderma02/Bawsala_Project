@@ -19,6 +19,15 @@ sudo chown root:www-data /etc/bawsala/bawsala.env
 sudo chmod 640 /etc/bawsala/bawsala.env
 ```
 
+To enable email, configure the Gmail sender's app password and verified From address. To enable
+Calendar invitations, create a Google Cloud OAuth client, enable the Google Calendar API, and
+authorize the calendar owner for offline access to `https://www.googleapis.com/auth/calendar.events`.
+Store the resulting refresh token, client ID, and client secret in the protected environment file.
+The worker refreshes access tokens automatically and sends attendees the Calendar event invitation.
+See [Google's OAuth refresh-token guide](https://developers.google.com/identity/protocols/oauth2/web-server),
+[Calendar event insert reference](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert),
+and [Gmail app-password help](https://support.google.com/accounts/answer/185833).
+
 Copy and enable the systemd service:
 
 ```bash
@@ -46,7 +55,7 @@ Create a private GitHub repository and add these Actions secrets under Settings,
 - `VPS_USER`: non-root deployment user.
 - `VPS_SSH_PRIVATE_KEY`: private key matching the public key installed for the deployment user.
 - `VPS_SSH_PORT`: optional, defaults to `22`.
-- `PRODUCTION_APPSETTINGS_JSON`: the complete production `appsettings.json` document. It must include a SQL Server connection string at `ConnectionStrings:DanaCotechDb` and all production authentication, payment, email, and calendar secrets.
+- `PRODUCTION_APPSETTINGS_JSON`: the complete production `appsettings.json` document. It must include a SQL Server connection string at `ConnectionStrings:DanaCotechDb` and all production authentication, payment, email, and calendar secrets. For email and Calendar, use the keys documented in `deploy/bawsala.env.example` with double underscores converted to nested JSON properties.
 
 Add these repository variables:
 
