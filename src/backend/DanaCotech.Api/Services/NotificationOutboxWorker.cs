@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using DanaCotech.Infrastructure.Data;
 using Microsoft.Data.SqlClient;
 
@@ -88,9 +89,23 @@ public sealed class NotificationOutboxWorker(
             catch (Exception exception)
             {
                 logger.LogError(exception, "Outbox item {OutboxId} failed on channel {Channel}", row.Id, channel);
-                await MarkAsync(connection, row.Id, false, null, exception.Message, cancellationToken);
+                await MarkAsync(connection, row.Id, false, null, DescribeException(exception), cancellationToken);
             }
         }
+    }
+
+    private static string DescribeException(Exception exception)
+    {
+        var details = new List<string>();
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var detail = $"{current.GetType().Name}: {current.Message}";
+            if (current is SmtpException smtpException)
+                detail += $" (SMTP status: {smtpException.StatusCode})";
+            details.Add(detail);
+        }
+
+        return string.Join(" -> ", details);
     }
 
     private static async Task<IReadOnlyCollection<OutboxItem>> ClaimAsync(SqlConnection connection, string channel, CancellationToken cancellationToken)

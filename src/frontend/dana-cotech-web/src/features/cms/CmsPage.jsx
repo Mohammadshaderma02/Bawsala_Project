@@ -427,14 +427,14 @@ function NotificationManager({ language }) {
     refresh: 'تحديث', records: 'إجمالي الإشعارات', channel: 'القناة', allChannels: 'كل القنوات', email: 'البريد الإلكتروني', calendar: 'تقويم Google', whatsapp: 'واتساب', discord: 'ديسكورد',
     status: 'الحالة', allStatuses: 'كل الحالات', pending: 'قيد الانتظار', processing: 'قيد المعالجة', sent: 'تم الإرسال', failed: 'فشل',
     recipient: 'المستلم', template: 'القالب', attempts: 'المحاولات', created: 'تاريخ الإنشاء', claimed: 'بدء المعالجة', sentAt: 'تاريخ الإرسال',
-    provider: 'مرجع المزوّد / الحدث', notificationId: 'رقم الإشعار', userId: 'رقم المستخدم', lastError: 'آخر خطأ', payload: 'بيانات الإشعار',
+    provider: 'مرجع المزوّد / الحدث', notificationId: 'رقم الإشعار', userId: 'رقم المستخدم', lastError: 'آخر خطأ', previousError: 'خطأ المحاولة السابقة', payload: 'بيانات الإشعار',
     empty: 'لا توجد إشعارات مطابقة لهذه المرشحات.', page: 'صفحة', of: 'من', previous: 'السابق', next: 'التالي', autoRefresh: 'تحديث تلقائي كل 30 ثانية',
   } : {
     title: 'Notification log', description: 'Track email delivery, Google Calendar events, and every notification’s details.',
     refresh: 'Refresh', records: 'Total notifications', channel: 'Channel', allChannels: 'All channels', email: 'Email', calendar: 'Google Calendar', whatsapp: 'WhatsApp', discord: 'Discord',
     status: 'Status', allStatuses: 'All statuses', pending: 'Pending', processing: 'Processing', sent: 'Sent', failed: 'Failed',
     recipient: 'Recipient', template: 'Template', attempts: 'Attempts', created: 'Created', claimed: 'Processing started', sentAt: 'Sent at',
-    provider: 'Provider / event reference', notificationId: 'Notification ID', userId: 'User ID', lastError: 'Last error', payload: 'Notification payload',
+    provider: 'Provider / event reference', notificationId: 'Notification ID', userId: 'User ID', lastError: 'Last error', previousError: 'Previous attempt error', payload: 'Notification payload',
     empty: 'No notifications match these filters.', page: 'Page', of: 'of', previous: 'Previous', next: 'Next', autoRefresh: 'Refreshes automatically every 30 seconds',
   };
   const pageSize = 25;
@@ -501,7 +501,7 @@ function NotificationManager({ language }) {
             <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.claimed}</Typography><Typography>{dateTime(item.claimedAtUtc)}</Typography></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.sentAt}</Typography><Typography>{dateTime(item.sentAtUtc)}</Typography></Grid>
             <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.provider}</Typography><Typography sx={{ overflowWrap: 'anywhere' }}>{item.providerReference || '—'}</Typography></Grid>
-            {item.lastError && <Grid size={{ xs: 12 }}><Alert severity="error"><Typography variant="subtitle2" fontWeight={900}>{copy.lastError}</Typography><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.lastError}</Typography></Alert></Grid>}
+            {item.lastError && <Grid size={{ xs: 12 }}><Alert severity="error"><Typography variant="subtitle2" fontWeight={900}>{item.status?.toLowerCase() === 'processing' ? copy.previousError : copy.lastError}</Typography><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.lastError}</Typography></Alert></Grid>}
             <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.payload}</Typography><Paper variant="outlined" sx={{ mt: .5, p: 1.5, maxHeight: 300, overflow: 'auto', bgcolor: 'grey.50' }}><Box component="pre" sx={{ m: 0, fontSize: 12, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontFamily: 'monospace' }}>{item.payloadJson}</Box></Paper></Grid>
           </Grid>
         </AccordionDetails>
