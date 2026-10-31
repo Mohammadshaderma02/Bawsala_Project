@@ -149,7 +149,10 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
               AND (@Status IS NULL OR notification.Status = @Status);
 
             SELECT notification.Id, notification.UserId,
-                   COALESCE(account.Name, N'Unknown user'), COALESCE(account.Email, N''),
+                   COALESCE(account.Name, N'Unknown user'),
+                   CASE WHEN notification.TemplateKey = N'test-email'
+                        THEN COALESCE(JSON_VALUE(notification.PayloadJson, '$.recipientEmail'), account.Email, N'')
+                        ELSE COALESCE(account.Email, N'') END,
                    notification.Channel, notification.TemplateKey, notification.Status,
                    notification.ProviderReference, notification.Attempts, notification.CreatedAtUtc,
                    notification.ClaimedAtUtc, notification.SentAtUtc, notification.LastError, notification.PayloadJson
@@ -185,6 +188,40 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
         }
 
         return new AdminNotificationPage(items, totalCount, page, pageSize);
+    }
+
+    public async Task<long?> ResendNotificationAsync(long notificationId, CancellationToken cancellationToken)
+    {
+        await using var connection = connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            INSERT INTO dbo.NotificationOutbox (UserId, Channel, TemplateKey, PayloadJson, Status, Attempts, CreatedAtUtc)
+            OUTPUT inserted.Id
+            SELECT notification.UserId, notification.Channel, notification.TemplateKey, notification.PayloadJson,
+                   N'pending', 0, SYSUTCDATETIME()
+            FROM dbo.NotificationOutbox AS notification
+            INNER JOIN dbo.ClientAccounts AS account ON account.Id = notification.UserId AND account.IsDeleted = 0
+            WHERE notification.Id = @NotificationId
+              AND notification.Channel = N'email'
+              AND notification.Status = N'failed'
+              AND
+              (
+                  notification.TemplateKey IN
+                  (
+                      N'welcome-enrollment', N'payment-refunded', N'career-profile-submitted',
+                      N'career-profile-ready', N'booking-confirmation', N'paid-session-unavailable', N'test-email'
+                  )
+                  OR
+                  (
+                      notification.TemplateKey = N'email-verification'
+                      AND account.IsEmailVerified = 0
+                      AND TRY_CONVERT(DATETIME2, JSON_VALUE(notification.PayloadJson, '$.expiresAtUtc')) > SYSUTCDATETIME()
+                  )
+              );
+            """, connection);
+        command.Parameters.Add("@NotificationId", SqlDbType.BigInt).Value = notificationId;
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is null || result is DBNull ? null : Convert.ToInt64(result);
     }
 
     public async Task<IReadOnlyCollection<(ClientAccount Account, ClientJourneyState Journey)>> GetUsersWithJourneysAsync(CancellationToken cancellationToken)

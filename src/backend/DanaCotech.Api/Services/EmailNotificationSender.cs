@@ -58,6 +58,14 @@ public sealed class EmailNotificationSender(IConfiguration configuration)
 
         switch (template)
         {
+            case "test-email":
+                recipient = arabic ? "بك" : "there";
+                subject = arabic ? "رسالة اختبار البريد الإلكتروني | بوصلة" : "Bawsala test email";
+                heading = arabic ? "إعداد البريد يعمل" : "Email setup is working";
+                paragraphs.Add(arabic
+                    ? "إذا وصلتك هذه الرسالة، فإن منصة بوصلة تمكنت من إرسال البريد الإلكتروني عبر إعدادات SMTP الحالية."
+                    : "If you received this message, Bawsala successfully sent email using the current SMTP settings.");
+                break;
             case "email-verification":
                 subject = arabic ? "تحقّق من بريدك الإلكتروني | بوصلة" : "Verify your email | Bawsala";
                 heading = arabic ? "أهلاً بك في بوصلة" : "Welcome to Bawsala";

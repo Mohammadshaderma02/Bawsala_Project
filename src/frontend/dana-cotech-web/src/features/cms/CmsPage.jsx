@@ -58,10 +58,12 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCmsLandingContent, saveCmsLandingContent, uploadCmsAsset } from './cmsApi';
-import { clearSession, createPlatformSession, createUser, deleteAdminUser, getAdminNotifications, getAdminPayments, getAdminSessions, getAdminUserDeletionLogs, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, reviewCareerProfile, updateUserRole } from '../platform/platformApi';
+import { clearSession, createPlatformSession, createUser, deleteAdminUser, getAdminNotifications, getAdminPayments, getAdminSessions, getAdminUserDeletionLogs, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, resendAdminNotification, reviewCareerProfile, sendAdminTestEmail, updateUserRole } from '../platform/platformApi';
 import { CareerClarityAssetsManager } from './CareerClarityAssetsManager';
 
 const SIDEBAR_WIDTH = 272;
+const RESENDABLE_EMAIL_TEMPLATES = new Set(['email-verification', 'welcome-enrollment', 'payment-refunded', 'career-profile-submitted', 'career-profile-ready', 'booking-confirmation', 'paid-session-unavailable', 'test-email']);
+const apiErrorMessage = (error, fallback) => error?.response?.data?.message || error?.response?.data?.Message || error?.message || fallback;
 const DASHBOARD_COPY = {
   en: { dashboard: 'Admin Dashboard', welcome: 'Welcome', overview: 'Overview', content: 'Website content', courses: 'Courses', sessions: 'Sessions', theme: 'Theme & Colors', themeHint: 'Control the global project colors, corner style, and homepage section visibility.', users: 'Users', totalUsers: 'Total users', clients: 'Clients', admins: 'Administrators', quick: 'Quick actions', editWebsite: 'Edit website', manageUsers: 'Manage users', viewWebsite: 'View website', createUser: 'Create user', createHint: 'Only administrators can create client or admin accounts.', fullName: 'Full name', email: 'Email', password: 'Temporary password', role: 'Role', create: 'Create', allUsers: 'All users', joined: 'Joined', publish: 'Publish', publishing: 'Publishing', changes: 'Unpublished changes', logout: 'Log out', overviewHint: 'A quick view of your platform administration workspace.', english: 'English', arabic: 'العربية' },
   ar: { dashboard: 'لوحة تحكم الإدارة', welcome: 'مرحباً', overview: 'نظرة عامة', content: 'محتوى الموقع', courses: 'الدورات', sessions: 'الجلسات', theme: 'المظهر والألوان', themeHint: 'تحكم بألوان المشروع، شكل الحواف، وظهور أقسام الصفحة الرئيسية.', users: 'المستخدمون', totalUsers: 'إجمالي المستخدمين', clients: 'العملاء', admins: 'المسؤولون', quick: 'إجراءات سريعة', editWebsite: 'تعديل الموقع', manageUsers: 'إدارة المستخدمين', viewWebsite: 'عرض الموقع', createUser: 'إنشاء مستخدم', createHint: 'يمكن للمسؤولين فقط إنشاء حساب عميل أو مسؤول.', fullName: 'الاسم الكامل', email: 'البريد الإلكتروني', password: 'كلمة مرور مؤقتة', role: 'الصلاحية', create: 'إنشاء', allUsers: 'جميع المستخدمين', joined: 'تاريخ الانضمام', publish: 'نشر', publishing: 'جارٍ النشر', changes: 'تغييرات غير منشورة', logout: 'تسجيل الخروج', overviewHint: 'نظرة سريعة على المنصة ومساحة الإدارة.', english: 'English', arabic: 'العربية' },
@@ -428,6 +430,7 @@ function NotificationManager({ language }) {
     status: 'الحالة', allStatuses: 'كل الحالات', pending: 'قيد الانتظار', processing: 'قيد المعالجة', sent: 'تم الإرسال', failed: 'فشل',
     recipient: 'المستلم', template: 'القالب', attempts: 'المحاولات', created: 'تاريخ الإنشاء', claimed: 'بدء المعالجة', sentAt: 'تاريخ الإرسال',
     provider: 'مرجع المزوّد / الحدث', notificationId: 'رقم الإشعار', userId: 'رقم المستخدم', lastError: 'آخر خطأ', previousError: 'خطأ المحاولة السابقة', payload: 'بيانات الإشعار',
+    testRecipient: 'البريد الإلكتروني المستلم للاختبار', sendTest: 'إرسال رسالة اختبار', resend: 'إعادة الإرسال', testQueued: 'تمت إضافة رسالة الاختبار إلى قائمة الإرسال إلى', resendQueued: 'تمت إضافة إعادة الإرسال كإشعار رقم', passwordResetHint: 'لأسباب أمنية، أرسل طلب إعادة تعيين كلمة مرور جديداً بدلاً من إعادة استخدام رابط قديم.',
     empty: 'لا توجد إشعارات مطابقة لهذه المرشحات.', page: 'صفحة', of: 'من', previous: 'السابق', next: 'التالي', autoRefresh: 'تحديث تلقائي كل 30 ثانية',
   } : {
     title: 'Notification log', description: 'Track email delivery, Google Calendar events, and every notification’s details.',
@@ -435,6 +438,7 @@ function NotificationManager({ language }) {
     status: 'Status', allStatuses: 'All statuses', pending: 'Pending', processing: 'Processing', sent: 'Sent', failed: 'Failed',
     recipient: 'Recipient', template: 'Template', attempts: 'Attempts', created: 'Created', claimed: 'Processing started', sentAt: 'Sent at',
     provider: 'Provider / event reference', notificationId: 'Notification ID', userId: 'User ID', lastError: 'Last error', previousError: 'Previous attempt error', payload: 'Notification payload',
+    testRecipient: 'Test recipient email', sendTest: 'Send test email', resend: 'Resend', testQueued: 'Test email queued to', resendQueued: 'Resend queued as notification', passwordResetHint: 'For security, request a fresh password reset instead of reusing an old link.',
     empty: 'No notifications match these filters.', page: 'Page', of: 'of', previous: 'Previous', next: 'Next', autoRefresh: 'Refreshes automatically every 30 seconds',
   };
   const pageSize = 25;
@@ -445,6 +449,10 @@ function NotificationManager({ language }) {
   const [result, setResult] = useState({ items: [], totalCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionBusy, setActionBusy] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [testRecipientEmail, setTestRecipientEmail] = useState('');
 
   useEffect(() => {
     const timer = window.setInterval(() => setRefreshKey((value) => value + 1), 30000);
@@ -457,7 +465,7 @@ function NotificationManager({ language }) {
     setError('');
     getAdminNotifications({ channel: filters.channel || undefined, status: filters.status || undefined, page, pageSize })
       .then((data) => { if (!cancelled) setResult(data || { items: [], totalCount: 0 }); })
-      .catch((requestError) => { if (!cancelled) setError(requestError?.message || loadError); })
+      .catch((requestError) => { if (!cancelled) setError(apiErrorMessage(requestError, loadError)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [filters.channel, filters.status, page, refreshKey, loadError]);
@@ -467,11 +475,48 @@ function NotificationManager({ language }) {
   const dateTime = (value) => value ? new Date(value).toLocaleString(ar ? 'ar-JO' : 'en-US') : '—';
   const statusColor = (status) => ({ sent: 'success', failed: 'error', processing: 'info', pending: 'warning' }[status?.toLowerCase()] || 'default');
   const statusLabel = (status) => ({ pending: copy.pending, processing: copy.processing, sent: copy.sent, failed: copy.failed }[status?.toLowerCase()] || status || '—');
+  const showEmailNotifications = () => {
+    setFilters({ channel: 'email', status: '' });
+    setPage(1);
+    setRefreshKey((value) => value + 1);
+  };
+  const sendTest = async () => {
+    setActionBusy('test');
+    setActionError('');
+    setActionMessage('');
+    try {
+      const recipient = await sendAdminTestEmail(testRecipientEmail, language);
+      setActionMessage(`${copy.testQueued} ${recipient}.`);
+      showEmailNotifications();
+    } catch (requestError) {
+      setActionError(apiErrorMessage(requestError, loadError));
+    } finally {
+      setActionBusy('');
+    }
+  };
+  const resend = async (notificationId) => {
+    setActionBusy(`resend-${notificationId}`);
+    setActionError('');
+    setActionMessage('');
+    try {
+      const newNotificationId = await resendAdminNotification(notificationId);
+      setActionMessage(`${copy.resendQueued} #${newNotificationId}.`);
+      showEmailNotifications();
+    } catch (requestError) {
+      setActionError(apiErrorMessage(requestError, loadError));
+    } finally {
+      setActionBusy('');
+    }
+  };
 
   return <Stack spacing={2.5} dir={ar ? 'rtl' : 'ltr'}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} spacing={1.5}>
       <Box><Typography variant="h4" fontWeight={900}>{copy.title}</Typography><Typography color="text.secondary">{copy.description}</Typography></Box>
-      <Button variant="outlined" startIcon={loading ? <CircularProgress size={18} /> : <NotificationsRoundedIcon />} onClick={() => setRefreshKey((value) => value + 1)} disabled={loading}>{copy.refresh}</Button>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+        <TextField type="email" size="small" required label={copy.testRecipient} value={testRecipientEmail} onChange={(event) => setTestRecipientEmail(event.target.value)} disabled={Boolean(actionBusy)} sx={{ minWidth: { sm: 250 } }} />
+        <Button variant="contained" onClick={sendTest} disabled={Boolean(actionBusy) || !testRecipientEmail.trim()} startIcon={actionBusy === 'test' ? <CircularProgress size={18} color="inherit" /> : <NotificationsRoundedIcon />}>{copy.sendTest}</Button>
+        <Button variant="outlined" startIcon={loading ? <CircularProgress size={18} /> : <NotificationsRoundedIcon />} onClick={() => setRefreshKey((value) => value + 1)} disabled={loading || Boolean(actionBusy)}>{copy.refresh}</Button>
+      </Stack>
     </Stack>
     <Paper sx={{ p: 2.5, borderRadius: 3 }}>
       <Grid container spacing={2} alignItems="center">
@@ -481,6 +526,8 @@ function NotificationManager({ language }) {
       </Grid>
     </Paper>
     {error && <Alert severity="error">{error}</Alert>}
+    {actionMessage && <Alert severity="success" onClose={() => setActionMessage('')}>{actionMessage}</Alert>}
+    {actionError && <Alert severity="error" onClose={() => setActionError('')}>{actionError}</Alert>}
     {loading && !rows.length ? <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}><CircularProgress /></Box> : rows.length ? <Stack spacing={1.25}>
       {rows.map((item) => <Accordion key={item.id} disableGutters sx={{ borderRadius: '14px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
         <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />} sx={{ px: 2.5 }}>
@@ -501,6 +548,8 @@ function NotificationManager({ language }) {
             <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.claimed}</Typography><Typography>{dateTime(item.claimedAtUtc)}</Typography></Grid>
             <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.sentAt}</Typography><Typography>{dateTime(item.sentAtUtc)}</Typography></Grid>
             <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.provider}</Typography><Typography sx={{ overflowWrap: 'anywhere' }}>{item.providerReference || '—'}</Typography></Grid>
+            {item.channel === 'email' && item.status === 'failed' && RESENDABLE_EMAIL_TEMPLATES.has(item.templateKey) && <Grid size={{ xs: 12 }}><Button variant="outlined" onClick={() => resend(item.id)} disabled={Boolean(actionBusy)} startIcon={actionBusy === `resend-${item.id}` ? <CircularProgress size={18} /> : <NotificationsRoundedIcon />}>{copy.resend}</Button></Grid>}
+            {item.channel === 'email' && item.status === 'failed' && item.templateKey === 'password-reset' && <Grid size={{ xs: 12 }}><Alert severity="info">{copy.passwordResetHint}</Alert></Grid>}
             {item.lastError && <Grid size={{ xs: 12 }}><Alert severity="error"><Typography variant="subtitle2" fontWeight={900}>{item.status?.toLowerCase() === 'processing' ? copy.previousError : copy.lastError}</Typography><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.lastError}</Typography></Alert></Grid>}
             <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.payload}</Typography><Paper variant="outlined" sx={{ mt: .5, p: 1.5, maxHeight: 300, overflow: 'auto', bgcolor: 'grey.50' }}><Box component="pre" sx={{ m: 0, fontSize: 12, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontFamily: 'monospace' }}>{item.payloadJson}</Box></Paper></Grid>
           </Grid>

@@ -10,6 +10,8 @@ public interface IPlatformService
     Task<ServiceResponse<IReadOnlyCollection<AdminUserDeletionLog>>> GetUserDeletionLogsAsync(CancellationToken cancellationToken);
     Task<ServiceResponse<AdminUserDeletionLog>> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken);
     Task<ServiceResponse<AdminNotificationPage>> GetNotificationsAsync(string? channel, string? status, int page, int pageSize, CancellationToken cancellationToken);
+    Task<ServiceResponse<long>> ResendNotificationAsync(long notificationId, CancellationToken cancellationToken);
+    Task<ServiceResponse<string>> QueueTestEmailAsync(Guid adminUserId, string recipientEmail, string language, CancellationToken cancellationToken);
     Task<ServiceResponse<IReadOnlyCollection<CourseStudentSummary>>> GetCourseStudentsAsync(string productSlug, CancellationToken cancellationToken);
     Task<ServiceResponse<AdminUserSummary>> UpdateUserRoleAsync(Guid actorUserId, Guid userId, string role, CancellationToken cancellationToken);
     Task<ServiceResponse<AuthResult>> LoginAsync(string email, string password, CancellationToken cancellationToken);

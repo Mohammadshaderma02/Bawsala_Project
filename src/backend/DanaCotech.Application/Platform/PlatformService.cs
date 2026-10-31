@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -50,6 +51,28 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
         var result = await repository.GetNotificationsAsync(channel, status, page, pageSize, cancellationToken);
         var safeItems = result.Items.Select(item => item with { PayloadJson = RedactNotificationPayload(item.PayloadJson) }).ToArray();
         return ServiceResponse<AdminNotificationPage>.Ok(result with { Items = safeItems });
+    }
+
+    public async Task<ServiceResponse<long>> ResendNotificationAsync(long notificationId, CancellationToken cancellationToken)
+    {
+        var resentId = await repository.ResendNotificationAsync(notificationId, cancellationToken);
+        return resentId is long id
+            ? ServiceResponse<long>.Ok(id, $"Resend queued as notification {id}")
+            : ServiceResponse<long>.Fail("This notification is not eligible for resend. It must be a failed email with an active recipient and a resendable message.");
+    }
+
+    public async Task<ServiceResponse<string>> QueueTestEmailAsync(Guid adminUserId, string recipientEmail, string language, CancellationToken cancellationToken)
+    {
+        var account = await repository.GetUserByIdAsync(adminUserId, cancellationToken);
+        if (account is null || account.IsDeleted || !string.Equals(account.Role, UserRoles.Admin, StringComparison.OrdinalIgnoreCase))
+            return ServiceResponse<string>.Fail("An active administrator account is required");
+        recipientEmail = recipientEmail?.Trim() ?? string.Empty;
+        if (!MailAddress.TryCreate(recipientEmail, out var parsedEmail) || !string.Equals(parsedEmail.Address, recipientEmail, StringComparison.OrdinalIgnoreCase))
+            return ServiceResponse<string>.Fail("Enter a valid test recipient email address");
+
+        var normalizedLanguage = !string.IsNullOrWhiteSpace(language) && language.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en";
+        await repository.QueueNotificationAsync(adminUserId, "email", "test-email", JsonSerializer.Serialize(new { recipientEmail = parsedEmail.Address, language = normalizedLanguage }), cancellationToken);
+        return ServiceResponse<string>.Ok(parsedEmail.Address, $"Test email queued to {parsedEmail.Address}");
     }
 
     private static string RedactNotificationPayload(string payloadJson)

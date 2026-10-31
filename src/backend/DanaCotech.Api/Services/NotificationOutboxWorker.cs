@@ -148,7 +148,14 @@ public sealed class NotificationOutboxWorker(
             FROM dbo.NotificationOutbox AS outbox
             INNER JOIN CandidateRows AS candidate ON candidate.Id = outbox.Id;
 
-            SELECT claimed.Id, claimed.UserId, account.Email, account.Name, claimed.TemplateKey, claimed.PayloadJson
+            SELECT claimed.Id, claimed.UserId,
+                   CASE WHEN claimed.TemplateKey = N'test-email'
+                        THEN COALESCE(JSON_VALUE(claimed.PayloadJson, '$.recipientEmail'), account.Email)
+                        ELSE account.Email END,
+                   CASE WHEN claimed.TemplateKey = N'test-email'
+                        THEN CASE WHEN JSON_VALUE(claimed.PayloadJson, '$.language') = N'ar' THEN N'بك' ELSE N'there' END
+                        ELSE account.Name END,
+                   claimed.TemplateKey, claimed.PayloadJson
             FROM @Claimed AS claimed
             INNER JOIN dbo.ClientAccounts AS account ON account.Id = claimed.UserId
             ORDER BY claimed.Id;

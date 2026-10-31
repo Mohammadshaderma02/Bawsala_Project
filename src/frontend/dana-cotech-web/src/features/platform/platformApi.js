@@ -44,6 +44,8 @@ export async function getAvailableSessions() { return unwrap(await httpClient.ge
 export async function bookAvailableSession(sessionId, language) { return unwrap(await httpClient.post(`/platform/sessions/${sessionId}/book`, { language }, authConfig())); }
 export async function getAdminSessions() { return unwrap(await httpClient.get('/platform/admin/sessions', authConfig())); }
 export async function getAdminNotifications(filters) { return unwrap(await httpClient.get('/platform/admin/notifications', { ...authConfig(), params: filters })); }
+export async function resendAdminNotification(notificationId) { return unwrap(await httpClient.post(`/platform/admin/notifications/${notificationId}/resend`, {}, authConfig())); }
+export async function sendAdminTestEmail(email, language) { return unwrap(await httpClient.post('/platform/admin/notifications/test-email', { email, language }, authConfig())); }
 export async function createPlatformSession(session) { return unwrap(await httpClient.post('/platform/admin/sessions', session, authConfig())); }
 export async function getAdminPayments() { return unwrap(await httpClient.get('/platform/admin/payments', authConfig())); }
 export async function refundAdminPayment(paymentId, reason) { return unwrap(await httpClient.post(`/platform/admin/payments/${paymentId}/refund`, { reason }, authConfig())); }

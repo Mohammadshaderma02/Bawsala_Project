@@ -39,6 +39,27 @@ public sealed class PlatformController(IPlatformService platformService, Session
         return Ok(await platformService.GetNotificationsAsync(channel, status, page, pageSize, cancellationToken));
     }
 
+    [HttpPost("admin/notifications/{notificationId:long}/resend")]
+    public async Task<IActionResult> ResendNotification(long notificationId, CancellationToken cancellationToken)
+    {
+        if (!IsAdmin()) return AdminAccessDenied();
+        if (!configuration.GetValue<bool>("Email:Enabled"))
+            return BadRequest(ServiceResponse<long>.Fail("Email delivery is disabled. Enable Email:Enabled before resending."));
+        var response = await platformService.ResendNotificationAsync(notificationId, cancellationToken);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("admin/notifications/test-email")]
+    public async Task<IActionResult> SendTestEmail(TestEmailRequest request, CancellationToken cancellationToken)
+    {
+        if (!tokenService.TryValidate(Request.Headers.Authorization, out var adminUserId, out var role) || !string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            return AdminAccessDenied();
+        if (!configuration.GetValue<bool>("Email:Enabled"))
+            return BadRequest(ServiceResponse<string>.Fail("Email delivery is disabled. Enable Email:Enabled before sending a test email."));
+        var response = await platformService.QueueTestEmailAsync(adminUserId, request.Email, request.Language, cancellationToken);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout(CheckoutRequest request, CancellationToken cancellationToken) =>
         await WithUser(userId => platformService.EnrollAsync(userId, request.ProductSlug, request.Language, cancellationToken));
@@ -159,6 +180,7 @@ public sealed record CreateSessionRequest(string SessionType, string TitleEn, st
 public sealed record RefundPaymentRequest(string Reason);
 public sealed record ReviewProfileRequest(string Notes, bool Release);
 public sealed record GuestCoachingCheckoutRequest(string Name, string Email, Guid SessionId, string Language = "en");
+public sealed record TestEmailRequest(string Email, string Language = "en");
 
 internal static class SimplePdf
 {
