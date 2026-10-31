@@ -26,7 +26,10 @@ database/010_email_verification.sql
 database/011_assets_defaults.sql
 database/012_meps_jod_currency.sql
 database/013_notification_outbox_delivery.sql
+database/014_admin_user_deletion_audit.sql
 ```
+
+Migration 014 enables administrator user deletion in the dashboard. Deleted accounts are deactivated and anonymized, while linked business records are retained and the administrator, affected account, and UTC deletion time are written to `dbo.AdminUserDeletionLogs`.
 
 Then set the connection string in `src/backend/DanaCotech.Api/appsettings.json`:
 

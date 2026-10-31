@@ -57,7 +57,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCmsLandingContent, saveCmsLandingContent, uploadCmsAsset } from './cmsApi';
-import { clearSession, createPlatformSession, createUser, getAdminPayments, getAdminSessions, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, reviewCareerProfile, updateUserRole } from '../platform/platformApi';
+import { clearSession, createPlatformSession, createUser, deleteAdminUser, getAdminPayments, getAdminSessions, getAdminUserDeletionLogs, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, reviewCareerProfile, updateUserRole } from '../platform/platformApi';
 import { CareerClarityAssetsManager } from './CareerClarityAssetsManager';
 
 const SIDEBAR_WIDTH = 272;
@@ -71,6 +71,26 @@ DASHBOARD_COPY.en.programClients = 'Assessment Results';
 DASHBOARD_COPY.ar.programClients = 'نتائج التقييمات';
 DASHBOARD_COPY.en.clarityAssets = 'Assessments & Media';
 DASHBOARD_COPY.ar.clarityAssets = 'التقييمات والفيديوهات';
+DASHBOARD_COPY.en.deleteUser = 'Delete user';
+DASHBOARD_COPY.ar.deleteUser = 'حذف المستخدم';
+DASHBOARD_COPY.en.deletionLog = 'Deletion log';
+DASHBOARD_COPY.ar.deletionLog = 'سجل الحذف';
+DASHBOARD_COPY.en.confirmDeleteUser = 'Delete this user?';
+DASHBOARD_COPY.ar.confirmDeleteUser = 'هل تريد حذف هذا المستخدم؟';
+DASHBOARD_COPY.en.deleteUserHint = 'This account will lose access immediately. Linked records will be kept, and this action will appear in the deletion log.';
+DASHBOARD_COPY.ar.deleteUserHint = 'سيتم إيقاف وصول هذا الحساب فوراً. ستبقى السجلات المرتبطة محفوظة وسيظهر هذا الإجراء في سجل الحذف.';
+DASHBOARD_COPY.en.cancel = 'Cancel';
+DASHBOARD_COPY.ar.cancel = 'إلغاء';
+DASHBOARD_COPY.en.deleting = 'Deleting…';
+DASHBOARD_COPY.ar.deleting = 'جارٍ الحذف…';
+DASHBOARD_COPY.en.deletedBy = 'Deleted by';
+DASHBOARD_COPY.ar.deletedBy = 'حُذف بواسطة';
+DASHBOARD_COPY.en.deletedAt = 'Deleted at';
+DASHBOARD_COPY.ar.deletedAt = 'تاريخ الحذف';
+DASHBOARD_COPY.en.noDeletionRecords = 'No users have been deleted yet.';
+DASHBOARD_COPY.ar.noDeletionRecords = 'لم يتم حذف أي مستخدم بعد.';
+DASHBOARD_COPY.en.userDeleted = 'User deactivated and deletion log saved.';
+DASHBOARD_COPY.ar.userDeleted = 'تم إيقاف الحساب وحفظ سجل الحذف.';
 
 const SECTION_LABELS = {
   hero: 'Hero',
@@ -109,6 +129,11 @@ export function CmsPage() {
   const [activeView, setActiveView] = useState('overview');
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [deletionLogs, setDeletionLogs] = useState([]);
+  const [loadingDeletionLogs, setLoadingDeletionLogs] = useState(false);
+  const [showDeletionLogs, setShowDeletionLogs] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedContentSection, setSelectedContentSection] = useState('hero');
 
@@ -139,7 +164,18 @@ export function CmsPage() {
     }
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  const loadDeletionLogs = async () => {
+    setLoadingDeletionLogs(true);
+    try {
+      setDeletionLogs(await getAdminUserDeletionLogs());
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message);
+    } finally {
+      setLoadingDeletionLogs(false);
+    }
+  };
+
+  useEffect(() => { loadUsers(); loadDeletionLogs(); }, []);
 
   const updateSection = (key, value) => {
     setContent((current) => ({ ...current, [key]: value }));
@@ -186,6 +222,22 @@ export function CmsPage() {
       setNotice(`${updated.name} is now ${updated.role}.`);
     } catch (requestError) {
       setError(requestError.response?.data?.message || requestError.message);
+    }
+  };
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    setError('');
+    try {
+      const deleted = await deleteAdminUser(userToDelete.userId);
+      setUsers((current) => current.filter((user) => user.userId !== userToDelete.userId));
+      await loadDeletionLogs();
+      setNotice(`${deleted.targetName}: ${d.userDeleted}`);
+      setUserToDelete(null);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message);
+    } finally {
+      setDeletingUser(false);
     }
   };
   const exportUsers = () => { const rows = [['Name','Email','Role','Joined'], ...users.map((user) => [user.name,user.email,user.role,user.createdAtUtc])]; const csv=rows.map((row)=>row.map((value)=>`"${String(value??'').replaceAll('"','""')}"`).join(',')).join('\r\n'); const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})); const link=document.createElement('a');link.href=url;link.download='users.csv';link.click();URL.revokeObjectURL(url); };
@@ -274,13 +326,15 @@ export function CmsPage() {
         </Paper>
 
         {activeView === 'users' && <Paper sx={{ mb: 3, p: 3, borderRadius: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}><Typography variant="h6" fontWeight={900}>{d.allUsers}</Typography><Button variant="outlined" onClick={exportUsers} disabled={!users.length}>Export CSV</Button></Stack>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} spacing={1.5} sx={{ mb: 2 }}><Typography variant="h6" fontWeight={900}>{d.allUsers}</Typography><Stack direction="row" spacing={1} flexWrap="wrap"><Button variant={showDeletionLogs ? 'contained' : 'outlined'} onClick={() => setShowDeletionLogs((shown) => !shown)}>{d.deletionLog}{deletionLogs.length ? ` (${deletionLogs.length})` : ''}</Button><Button variant="outlined" onClick={exportUsers} disabled={!users.length}>Export CSV</Button></Stack></Stack>
           {loadingUsers ? <CircularProgress size={24} /> : <Stack spacing={1}>{users.map((user) => (
             <Stack key={user.userId} direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2.5 }}>
               <Box sx={{ flexGrow: 1 }}><Typography fontWeight={900}>{user.name}</Typography><Typography variant="body2" color="text.secondary">{user.email} · {d.joined} {new Date(user.createdAtUtc).toLocaleDateString(dashboardLanguage === 'ar' ? 'ar-JO' : 'en-US')}</Typography></Box>
               <TextField select size="small" label={d.role} value={user.role} disabled={user.userId === session.userId} onChange={(event) => changeRole(user.userId, event.target.value)} sx={{ minWidth: 130 }}><MenuItem value="Client">Client</MenuItem><MenuItem value="Admin">Admin</MenuItem></TextField>
+              <IconButton color="error" aria-label={d.deleteUser} title={d.deleteUser} disabled={user.userId === session.userId} onClick={() => setUserToDelete(user)}><DeleteOutlineRoundedIcon /></IconButton>
             </Stack>
-          ))}</Stack>}
+          ))}{!users.length && <Typography color="text.secondary">No active users.</Typography>}</Stack>}
+          {showDeletionLogs && <Box sx={{ mt: 3 }}><Divider sx={{ mb: 2 }} /><Typography variant="h6" fontWeight={900} sx={{ mb: 1.5 }}>{d.deletionLog}</Typography>{loadingDeletionLogs ? <CircularProgress size={24} /> : deletionLogs.length ? <Stack spacing={1}>{deletionLogs.map((log) => <Box key={`${log.targetUserId}-${log.deletedAtUtc}`} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2.5 }}><Typography fontWeight={900}>{log.targetName} · {log.targetEmail} · {log.targetRole}</Typography><Typography variant="body2" color="text.secondary">{d.deletedBy} {log.actorName} ({log.actorEmail})</Typography><Typography variant="caption" color="text.secondary">{d.deletedAt} {new Date(log.deletedAtUtc).toLocaleString(dashboardLanguage === 'ar' ? 'ar-JO' : 'en-US')}</Typography></Box>)}</Stack> : <Typography color="text.secondary">{d.noDeletionRecords}</Typography>}</Box>}
         </Paper>}
 
         <Paper sx={{ display: activeView === 'content' ? 'block' : 'none', mb: 3, px: 2, borderRadius: 3 }}>
@@ -323,6 +377,18 @@ export function CmsPage() {
         )}
       </Container>
       </Box>
+      <Dialog open={Boolean(userToDelete)} onClose={() => !deletingUser && setUserToDelete(null)} fullWidth maxWidth="xs">
+        <DialogTitle fontWeight={900}>{d.confirmDeleteUser}</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>{d.deleteUserHint}</Alert>
+          <Typography fontWeight={800}>{userToDelete?.name}</Typography>
+          <Typography variant="body2" color="text.secondary">{userToDelete?.email}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUserToDelete(null)} disabled={deletingUser}>{d.cancel}</Button>
+          <Button color="error" variant="contained" onClick={confirmDeleteUser} disabled={deletingUser}>{deletingUser ? <><CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />{d.deleting}</> : d.deleteUser}</Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar open={Boolean(notice)} autoHideDuration={4000} onClose={() => setNotice('')} message={notice} />
     </Box>
   );

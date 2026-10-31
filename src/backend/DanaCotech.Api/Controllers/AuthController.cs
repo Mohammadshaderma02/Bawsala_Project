@@ -31,6 +31,24 @@ public sealed class AuthController(IPlatformService platformService, SessionToke
         return Ok(await platformService.GetUsersAsync(cancellationToken));
     }
 
+    [HttpGet("users/deletion-log")]
+    public async Task<IActionResult> GetUserDeletionLogs(CancellationToken cancellationToken)
+    {
+        if (!TryGetAdmin(out _)) return AdminAccessDenied();
+        return Ok(await platformService.GetUserDeletionLogsAsync(cancellationToken));
+    }
+
+    [HttpDelete("users/{userId:guid}")]
+    public async Task<IActionResult> DeleteUser(Guid userId, CancellationToken cancellationToken)
+    {
+        if (!TryGetAdmin(out var actorUserId)) return AdminAccessDenied();
+        var response = await platformService.DeleteUserAsync(actorUserId, userId, cancellationToken);
+        if (response.Success) return Ok(response);
+        if (response.Message == "User not found") return NotFound(response);
+        if (response.Message == "The last active administrator cannot be deleted") return Conflict(response);
+        return BadRequest(response);
+    }
+
     [HttpPatch("users/{userId:guid}/role")]
     public async Task<IActionResult> UpdateUserRole(Guid userId, UpdateUserRoleRequest request, CancellationToken cancellationToken)
     {

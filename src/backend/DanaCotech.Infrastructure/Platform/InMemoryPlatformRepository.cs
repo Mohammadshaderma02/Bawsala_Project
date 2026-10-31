@@ -12,15 +12,48 @@ public sealed class InMemoryPlatformRepository : IPlatformRepository
     private readonly ConcurrentDictionary<Guid, EmailVerificationToken> emailVerifications = new();
     private readonly ConcurrentDictionary<Guid, PlatformSession> sessions = new();
     private readonly ConcurrentDictionary<Guid, PaymentTransaction> payments = new();
+    private readonly ConcurrentQueue<AdminUserDeletionLog> deletionLogs = new();
+    private readonly object deletionLock = new();
 
     public Task<ClientAccount?> GetUserByEmailAsync(string email, CancellationToken cancellationToken) =>
         Task.FromResult(users.Values.FirstOrDefault(user => user.Email.Equals(email, StringComparison.OrdinalIgnoreCase)));
     public Task<ClientAccount?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken) => Task.FromResult(users.GetValueOrDefault(userId));
     public Task AddUserAsync(ClientAccount account, CancellationToken cancellationToken) { users[account.Id] = account; return Task.CompletedTask; }
     public Task<IReadOnlyCollection<ClientAccount>> GetUsersAsync(CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyCollection<ClientAccount>>(users.Values.OrderByDescending(user => user.CreatedAtUtc).ToArray());
+        Task.FromResult<IReadOnlyCollection<ClientAccount>>(users.Values.Where(user => !user.IsDeleted).OrderByDescending(user => user.CreatedAtUtc).ToArray());
+    public Task<IReadOnlyCollection<AdminUserDeletionLog>> GetUserDeletionLogsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyCollection<AdminUserDeletionLog>>(deletionLogs.OrderByDescending(entry => entry.DeletedAtUtc).ToArray());
+    public Task<UserDeletionOutcome> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken)
+    {
+        lock (deletionLock)
+        {
+            if (!users.TryGetValue(actorUserId, out var actor) || actor.IsDeleted || actor.Role != UserRoles.Admin)
+                return Task.FromResult(new UserDeletionOutcome("actor-unavailable", null));
+            if (actorUserId == userId)
+                return Task.FromResult(new UserDeletionOutcome("self-delete", null));
+            if (!users.TryGetValue(userId, out var target) || target.IsDeleted)
+                return Task.FromResult(new UserDeletionOutcome("not-found", null));
+            if (target.Role == UserRoles.Admin && users.Values.Count(user => !user.IsDeleted && user.Role == UserRoles.Admin) <= 1)
+                return Task.FromResult(new UserDeletionOutcome("last-admin", null));
+
+            var deletedAtUtc = DateTime.UtcNow;
+            var auditLog = new AdminUserDeletionLog(actor.Id, actor.Name, actor.Email, target.Id, target.Name, target.Email, target.Role, deletedAtUtc);
+            users[target.Id] = target with
+            {
+                Name = "Deleted user",
+                Email = $"deleted+{target.Id:N}@deleted.invalid",
+                PasswordHash = string.Empty,
+                PasswordSalt = string.Empty,
+                IsEmailVerified = false,
+                IsDeleted = true,
+                DeletedAtUtc = deletedAtUtc
+            };
+            deletionLogs.Enqueue(auditLog);
+            return Task.FromResult(new UserDeletionOutcome(null, auditLog));
+        }
+    }
     public Task<IReadOnlyCollection<(ClientAccount Account, ClientJourneyState Journey)>> GetUsersWithJourneysAsync(CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyCollection<(ClientAccount, ClientJourneyState)>>(users.Values.Select(user => (user, journeys.GetOrAdd(user.Id, id => new ClientJourneyState { UserId = id }))).ToArray());
+        Task.FromResult<IReadOnlyCollection<(ClientAccount, ClientJourneyState)>>(users.Values.Where(user => !user.IsDeleted).Select(user => (user, journeys.GetOrAdd(user.Id, id => new ClientJourneyState { UserId = id }))).ToArray());
     public Task UpdateUserRoleAsync(Guid userId, string role, CancellationToken cancellationToken)
     {
         if (users.TryGetValue(userId, out var user)) users[userId] = user with { Role = role };
@@ -36,7 +69,7 @@ public sealed class InMemoryPlatformRepository : IPlatformRepository
     public Task<bool> ResetPasswordAsync(string tokenHash, string passwordHash, string passwordSalt, DateTime usedAtUtc, CancellationToken cancellationToken)
     {
         var reset = passwordResets.Values.FirstOrDefault(item => item.TokenHash == tokenHash && item.UsedAtUtc is null && item.ExpiresAtUtc > usedAtUtc);
-        if (reset is null || !users.TryGetValue(reset.UserId, out var user)) return Task.FromResult(false);
+        if (reset is null || !users.TryGetValue(reset.UserId, out var user) || user.IsDeleted) return Task.FromResult(false);
         users[user.Id] = user with { PasswordHash = passwordHash, PasswordSalt = passwordSalt };
         passwordResets[reset.Id] = reset with { UsedAtUtc = usedAtUtc };
         return Task.FromResult(true);
@@ -45,7 +78,7 @@ public sealed class InMemoryPlatformRepository : IPlatformRepository
     public Task<bool> VerifyEmailAsync(string tokenHash, DateTime usedAtUtc, CancellationToken cancellationToken)
     {
         var token = emailVerifications.Values.FirstOrDefault(item => item.TokenHash == tokenHash && item.UsedAtUtc is null && item.ExpiresAtUtc > usedAtUtc);
-        if (token is null || !users.TryGetValue(token.UserId, out var user)) return Task.FromResult(false);
+        if (token is null || !users.TryGetValue(token.UserId, out var user) || user.IsDeleted) return Task.FromResult(false);
         users[user.Id] = user with { IsEmailVerified = true }; emailVerifications[token.Id] = token with { UsedAtUtc = usedAtUtc }; return Task.FromResult(true);
     }
     public Task<ClientJourneyState> GetJourneyAsync(Guid userId, CancellationToken cancellationToken) => Task.FromResult(journeys.GetOrAdd(userId, id => new ClientJourneyState { UserId = id }));

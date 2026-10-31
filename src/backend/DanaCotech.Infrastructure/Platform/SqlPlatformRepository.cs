@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Data;
 using DanaCotech.Application.Platform;
 using DanaCotech.Domain.Platform;
 using DanaCotech.Infrastructure.Data;
@@ -13,7 +14,7 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
     public async Task<ClientAccount?> GetUserByEmailAsync(string email, CancellationToken cancellationToken)
     {
         await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
-        await using var command = new SqlCommand("SELECT TOP 1 Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified FROM dbo.ClientAccounts WHERE Email = @Email", connection);
+        await using var command = new SqlCommand("SELECT TOP 1 Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified, IsDeleted, DeletedAtUtc FROM dbo.ClientAccounts WHERE Email = @Email", connection);
         command.Parameters.AddWithValue("@Email", email);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadAccount(reader) : null;
@@ -22,7 +23,7 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
     public async Task<ClientAccount?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
         await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
-        await using var command = new SqlCommand("SELECT TOP 1 Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified FROM dbo.ClientAccounts WHERE Id = @Id", connection);
+        await using var command = new SqlCommand("SELECT TOP 1 Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified, IsDeleted, DeletedAtUtc FROM dbo.ClientAccounts WHERE Id = @Id", connection);
         command.Parameters.AddWithValue("@Id", userId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? ReadAccount(reader) : null;
@@ -42,10 +43,99 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
     {
         var users = new List<ClientAccount>();
         await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
-        await using var command = new SqlCommand("SELECT Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified FROM dbo.ClientAccounts ORDER BY CreatedAtUtc DESC", connection);
+        await using var command = new SqlCommand("SELECT Id, Name, Email, PasswordHash, PasswordSalt, Role, CreatedAtUtc, IsEmailVerified, IsDeleted, DeletedAtUtc FROM dbo.ClientAccounts WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC", connection);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken)) users.Add(ReadAccount(reader));
         return users;
+    }
+
+    public async Task<IReadOnlyCollection<AdminUserDeletionLog>> GetUserDeletionLogsAsync(CancellationToken cancellationToken)
+    {
+        var logs = new List<AdminUserDeletionLog>();
+        await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("SELECT ActorUserId, ActorName, ActorEmail, TargetUserId, TargetName, TargetEmail, TargetRole, DeletedAtUtc FROM dbo.AdminUserDeletionLogs ORDER BY DeletedAtUtc DESC", connection);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            logs.Add(new AdminUserDeletionLog(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetGuid(3), reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetDateTime(7)));
+        return logs;
+    }
+
+    public async Task<UserDeletionOutcome> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken)
+    {
+        await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await using var command = new SqlCommand("""
+            SET XACT_ABORT ON;
+            DECLARE @Outcome NVARCHAR(40) = N'not-found';
+            DECLARE @ActorName NVARCHAR(160), @ActorEmail NVARCHAR(320);
+            DECLARE @TargetName NVARCHAR(160), @TargetEmail NVARCHAR(320), @TargetRole NVARCHAR(20);
+            DECLARE @DeletedAtUtc DATETIME2;
+
+            SELECT @ActorName = Name, @ActorEmail = Email
+            FROM dbo.ClientAccounts WITH (UPDLOCK, HOLDLOCK)
+            WHERE Id = @ActorUserId AND Role = N'Admin' AND IsDeleted = 0;
+
+            IF @ActorName IS NULL
+                SET @Outcome = N'actor-unavailable';
+            ELSE IF @ActorUserId = @UserId
+                SET @Outcome = N'self-delete';
+            ELSE
+            BEGIN
+                SELECT @TargetName = Name, @TargetEmail = Email, @TargetRole = Role
+                FROM dbo.ClientAccounts WITH (UPDLOCK, HOLDLOCK)
+                WHERE Id = @UserId AND IsDeleted = 0;
+
+                IF @TargetName IS NULL
+                    SET @Outcome = N'not-found';
+                ELSE IF @TargetRole = N'Admin' AND
+                    (SELECT COUNT(*) FROM dbo.ClientAccounts WITH (UPDLOCK, HOLDLOCK) WHERE Role = N'Admin' AND IsDeleted = 0) <= 1
+                    SET @Outcome = N'last-admin';
+                ELSE
+                BEGIN
+                    SET @DeletedAtUtc = SYSUTCDATETIME();
+                    UPDATE dbo.ClientAccounts
+                    SET Name = N'Deleted user',
+                        Email = N'deleted+' + CONVERT(NVARCHAR(36), @UserId) + N'@deleted.invalid',
+                        PasswordHash = N'',
+                        PasswordSalt = N'',
+                        IsEmailVerified = 0,
+                        IsDeleted = 1,
+                        DeletedAtUtc = @DeletedAtUtc
+                    WHERE Id = @UserId AND IsDeleted = 0;
+                    IF @@ROWCOUNT = 1
+                    BEGIN
+                        UPDATE dbo.NotificationOutbox
+                        SET Status = N'failed',
+                            ClaimedAtUtc = NULL,
+                            LastError = N'Recipient account was deleted before notification delivery.'
+                        WHERE UserId = @UserId AND Status IN (N'pending', N'processing');
+
+                        INSERT dbo.AdminUserDeletionLogs (ActorUserId, ActorName, ActorEmail, TargetUserId, TargetName, TargetEmail, TargetRole, DeletedAtUtc)
+                        VALUES (@ActorUserId, @ActorName, @ActorEmail, @UserId, @TargetName, @TargetEmail, @TargetRole, @DeletedAtUtc);
+                        SET @Outcome = N'deleted';
+                    END
+                END
+            END;
+
+            SELECT @Outcome, @ActorName, @ActorEmail, @TargetName, @TargetEmail, @TargetRole, @DeletedAtUtc;
+            """, connection, transaction);
+        command.Parameters.AddWithValue("@ActorUserId", actorUserId);
+        command.Parameters.AddWithValue("@UserId", userId);
+        UserDeletionOutcome outcome;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            await reader.ReadAsync(cancellationToken);
+            var result = reader.GetString(0);
+            if (result != "deleted")
+                outcome = new UserDeletionOutcome(result, null);
+            else
+            {
+                var auditLog = new AdminUserDeletionLog(actorUserId, reader.GetString(1), reader.GetString(2), userId, reader.GetString(3), reader.GetString(4), reader.GetString(5), reader.GetDateTime(6));
+                outcome = new UserDeletionOutcome(null, auditLog);
+            }
+        }
+        await transaction.CommitAsync(cancellationToken);
+        return outcome;
     }
 
     public async Task<IReadOnlyCollection<(ClientAccount Account, ClientJourneyState Journey)>> GetUsersWithJourneysAsync(CancellationToken cancellationToken)
@@ -53,17 +143,17 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
         var result = new List<(ClientAccount, ClientJourneyState)>();
         await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            SELECT a.Id, a.Name, a.Email, a.PasswordHash, a.PasswordSalt, a.Role, a.CreatedAtUtc, a.IsEmailVerified, j.StateJson
+            SELECT a.Id, a.Name, a.Email, a.PasswordHash, a.PasswordSalt, a.Role, a.CreatedAtUtc, a.IsEmailVerified, a.IsDeleted, a.DeletedAtUtc, j.StateJson
             FROM dbo.ClientAccounts a
             LEFT JOIN dbo.ClientJourneyStates j ON j.UserId = a.Id
-            WHERE a.Role = N'Client'
+            WHERE a.Role = N'Client' AND a.IsDeleted = 0
             ORDER BY a.CreatedAtUtc DESC
             """, connection);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             var account = ReadAccount(reader);
-            var json = reader.IsDBNull(8) ? null : reader.GetString(8);
+            var json = reader.IsDBNull(10) ? null : reader.GetString(10);
             var journey = string.IsNullOrWhiteSpace(json) ? new ClientJourneyState { UserId = account.Id } : JsonSerializer.Deserialize<ClientJourneyState>(json, JsonOptions) ?? new ClientJourneyState { UserId = account.Id };
             result.Add((account, journey));
         }
@@ -107,8 +197,9 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
         await using var command = new SqlCommand("""
             DECLARE @UserId UNIQUEIDENTIFIER;
             SELECT TOP 1 @UserId = UserId
-            FROM dbo.PasswordResetTokens WITH (UPDLOCK, HOLDLOCK)
-            WHERE TokenHash = @TokenHash AND UsedAtUtc IS NULL AND ExpiresAtUtc > @UsedAtUtc;
+            FROM dbo.PasswordResetTokens AS reset WITH (UPDLOCK, HOLDLOCK)
+            WHERE reset.TokenHash = @TokenHash AND reset.UsedAtUtc IS NULL AND reset.ExpiresAtUtc > @UsedAtUtc
+              AND EXISTS (SELECT 1 FROM dbo.ClientAccounts AS account WHERE account.Id = reset.UserId AND account.IsDeleted = 0);
 
             IF @UserId IS NOT NULL
             BEGIN
@@ -141,7 +232,8 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = new SqlCommand("""
             DECLARE @UserId UNIQUEIDENTIFIER;
-            SELECT TOP 1 @UserId=UserId FROM dbo.EmailVerificationTokens WITH (UPDLOCK,HOLDLOCK) WHERE TokenHash=@Hash AND UsedAtUtc IS NULL AND ExpiresAtUtc>@Now;
+            SELECT TOP 1 @UserId=verification.UserId FROM dbo.EmailVerificationTokens AS verification WITH (UPDLOCK,HOLDLOCK) WHERE verification.TokenHash=@Hash AND verification.UsedAtUtc IS NULL AND verification.ExpiresAtUtc>@Now
+              AND EXISTS (SELECT 1 FROM dbo.ClientAccounts AS account WHERE account.Id = verification.UserId AND account.IsDeleted = 0);
             IF @UserId IS NULL SELECT CAST(0 AS BIT);
             ELSE BEGIN UPDATE dbo.ClientAccounts SET IsEmailVerified=1 WHERE Id=@UserId; UPDATE dbo.EmailVerificationTokens SET UsedAtUtc=@Now WHERE TokenHash=@Hash; SELECT CAST(1 AS BIT); END
             """, connection, transaction);
@@ -304,5 +396,5 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
     }
 
     private static PaymentTransaction ReadPayment(SqlDataReader reader) => new(reader.GetGuid(0), reader.IsDBNull(1) ? null : reader.GetGuid(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetDecimal(7), reader.GetString(8), reader.GetString(9), reader.GetString(10), reader.GetString(11), reader.GetDateTime(12), reader.IsDBNull(13) ? null : reader.GetDateTime(13), reader.IsDBNull(14) ? null : reader.GetDateTime(14), reader.GetString(15));
-    private static ClientAccount ReadAccount(SqlDataReader reader) => new(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5), reader.GetDateTime(6), reader.GetBoolean(7));
+    private static ClientAccount ReadAccount(SqlDataReader reader) => new(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5), reader.GetDateTime(6), reader.GetBoolean(7), reader.GetBoolean(8), reader.IsDBNull(9) ? null : reader.GetDateTime(9));
 }

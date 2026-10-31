@@ -94,6 +94,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors(frontendPolicy);
 app.UseRateLimiter();
+app.UseMiddleware<ActiveSessionMiddleware>();
 
 app.UseAuthorization();
 

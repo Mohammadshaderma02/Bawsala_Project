@@ -6,7 +6,7 @@ public static class UserRoles
     public const string Client = "Client";
 }
 
-public sealed record ClientAccount(Guid Id, string Name, string Email, string PasswordHash, string PasswordSalt, string Role, DateTime CreatedAtUtc, bool IsEmailVerified = true);
+public sealed record ClientAccount(Guid Id, string Name, string Email, string PasswordHash, string PasswordSalt, string Role, DateTime CreatedAtUtc, bool IsEmailVerified = true, bool IsDeleted = false, DateTime? DeletedAtUtc = null);
 public sealed record PasswordResetToken(Guid Id, Guid UserId, string TokenHash, DateTime ExpiresAtUtc, DateTime CreatedAtUtc, DateTime? UsedAtUtc = null);
 public sealed record EmailVerificationToken(Guid Id, Guid UserId, string TokenHash, DateTime ExpiresAtUtc, DateTime CreatedAtUtc, DateTime? UsedAtUtc = null);
 
@@ -53,6 +53,8 @@ public sealed record AuthResult(Guid UserId, string Name, string Email, string R
 public sealed record PasswordResetDispatch(string? ResetUrl, DateTime? ExpiresAtUtc);
 public sealed record EmailVerificationDispatch(string? VerificationUrl, DateTime? ExpiresAtUtc);
 public sealed record AdminUserSummary(Guid UserId, string Name, string Email, string Role, DateTime CreatedAtUtc);
+public sealed record AdminUserDeletionLog(Guid ActorUserId, string ActorName, string ActorEmail, Guid TargetUserId, string TargetName, string TargetEmail, string TargetRole, DateTime DeletedAtUtc);
+public sealed record UserDeletionOutcome(string? Error, AdminUserDeletionLog? AuditLog);
 public sealed record CourseStudentSummary(Guid UserId, string Name, string Email, DateTime JoinedAtUtc, int CompletedLessons, int TotalLessons, int ProgressPercent);
 public sealed record SessionAttendee(Guid UserId, string Name, string Email, DateTime BookedAtUtc);
 public sealed record PlatformSession(Guid Id, string SessionType, string TitleEn, string TitleAr, DateTime StartsAtUtc, DateTime EndsAtUtc, int? Capacity, string MeetingUrl, bool IsBookable, IReadOnlyCollection<SessionAttendee> Attendees);

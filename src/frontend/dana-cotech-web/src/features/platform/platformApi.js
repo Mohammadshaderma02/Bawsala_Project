@@ -26,6 +26,8 @@ export async function requestPasswordReset(email) { return unwrap(await httpClie
 export async function resetPassword(token, newPassword) { return unwrap(await httpClient.post('/auth/reset-password', { token, newPassword })); }
 export async function createUser(name, email, password, role) { return unwrap(await httpClient.post('/auth/users', { name, email, password, role }, authConfig())); }
 export async function getAdminUsers() { return unwrap(await httpClient.get('/auth/users', authConfig())); }
+export async function getAdminUserDeletionLogs() { return unwrap(await httpClient.get('/auth/users/deletion-log', authConfig())); }
+export async function deleteAdminUser(userId) { return unwrap(await httpClient.delete(`/auth/users/${userId}`, authConfig())); }
 export async function updateUserRole(userId, role) { return unwrap(await httpClient.patch(`/auth/users/${userId}/role`, { role }, authConfig())); }
 export async function getCourseStudents(productSlug) { return unwrap(await httpClient.get(`/platform/admin/courses/${encodeURIComponent(productSlug)}/students`, authConfig())); }
 export async function getCatalog(language) { return unwrap(await httpClient.get('/platform/catalog', { params: { lang: language } })); }

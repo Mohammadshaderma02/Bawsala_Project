@@ -16,6 +16,25 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
             users.Select(ToAdminSummary).ToArray());
     }
 
+    public async Task<ServiceResponse<IReadOnlyCollection<AdminUserDeletionLog>>> GetUserDeletionLogsAsync(CancellationToken cancellationToken) =>
+        ServiceResponse<IReadOnlyCollection<AdminUserDeletionLog>>.Ok(await repository.GetUserDeletionLogsAsync(cancellationToken));
+
+    public async Task<ServiceResponse<AdminUserDeletionLog>> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken)
+    {
+        var outcome = await repository.DeleteUserAsync(actorUserId, userId, cancellationToken);
+        if (outcome.AuditLog is not null)
+            return ServiceResponse<AdminUserDeletionLog>.Ok(outcome.AuditLog, "User deleted and deletion logged");
+
+        var message = outcome.Error switch
+        {
+            "actor-unavailable" => "An active administrator account is required",
+            "self-delete" => "You cannot delete your own account",
+            "last-admin" => "The last active administrator cannot be deleted",
+            _ => "User not found"
+        };
+        return ServiceResponse<AdminUserDeletionLog>.Fail(message);
+    }
+
     public async Task<ServiceResponse<IReadOnlyCollection<CourseStudentSummary>>> GetCourseStudentsAsync(string productSlug, CancellationToken cancellationToken)
     {
         var product = (await GetCatalogAsync("en", cancellationToken)).FirstOrDefault(item => item.Slug == productSlug);
@@ -39,7 +58,7 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
             return ServiceResponse<AdminUserSummary>.Fail("You cannot change your own administrator role");
 
         var account = await repository.GetUserByIdAsync(userId, cancellationToken);
-        if (account is null) return ServiceResponse<AdminUserSummary>.Fail("User not found");
+        if (account is null || account.IsDeleted) return ServiceResponse<AdminUserSummary>.Fail("User not found");
         await repository.UpdateUserRoleAsync(userId, role, cancellationToken);
         return ServiceResponse<AdminUserSummary>.Ok(ToAdminSummary(account with { Role = role }), "User role updated");
     }
@@ -65,7 +84,7 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
     public async Task<ServiceResponse<AuthResult>> LoginAsync(string email, string password, CancellationToken cancellationToken)
     {
         var account = await repository.GetUserByEmailAsync(email.Trim().ToLowerInvariant(), cancellationToken);
-        if (account is null) return ServiceResponse<AuthResult>.Fail("Invalid email or password");
+        if (account is null || account.IsDeleted) return ServiceResponse<AuthResult>.Fail("Invalid email or password");
         var actual = Rfc2898DeriveBytes.Pbkdf2(password, Convert.FromBase64String(account.PasswordSalt), 120_000, HashAlgorithmName.SHA256, 32);
         if (!CryptographicOperations.FixedTimeEquals(actual, Convert.FromBase64String(account.PasswordHash)))
             return ServiceResponse<AuthResult>.Fail("Invalid email or password");
@@ -101,7 +120,7 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
         const string genericMessage = "If an account exists for this email, a password reset link has been sent.";
         email = email.Trim().ToLowerInvariant();
         var account = email.Contains('@') ? await repository.GetUserByEmailAsync(email, cancellationToken) : null;
-        if (account is null)
+        if (account is null || account.IsDeleted)
             return ServiceResponse<PasswordResetDispatch>.Ok(new PasswordResetDispatch(null, null), genericMessage);
 
         var rawToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))

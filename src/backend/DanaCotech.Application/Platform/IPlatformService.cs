@@ -7,6 +7,8 @@ public interface IPlatformService
 {
     Task<ServiceResponse<AuthResult>> CreateUserAsync(string name, string email, string password, string role, CancellationToken cancellationToken);
     Task<ServiceResponse<IReadOnlyCollection<AdminUserSummary>>> GetUsersAsync(CancellationToken cancellationToken);
+    Task<ServiceResponse<IReadOnlyCollection<AdminUserDeletionLog>>> GetUserDeletionLogsAsync(CancellationToken cancellationToken);
+    Task<ServiceResponse<AdminUserDeletionLog>> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken);
     Task<ServiceResponse<IReadOnlyCollection<CourseStudentSummary>>> GetCourseStudentsAsync(string productSlug, CancellationToken cancellationToken);
     Task<ServiceResponse<AdminUserSummary>> UpdateUserRoleAsync(Guid actorUserId, Guid userId, string role, CancellationToken cancellationToken);
     Task<ServiceResponse<AuthResult>> LoginAsync(string email, string password, CancellationToken cancellationToken);
