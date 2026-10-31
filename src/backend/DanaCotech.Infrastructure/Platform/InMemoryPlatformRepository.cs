@@ -23,6 +23,8 @@ public sealed class InMemoryPlatformRepository : IPlatformRepository
         Task.FromResult<IReadOnlyCollection<ClientAccount>>(users.Values.Where(user => !user.IsDeleted).OrderByDescending(user => user.CreatedAtUtc).ToArray());
     public Task<IReadOnlyCollection<AdminUserDeletionLog>> GetUserDeletionLogsAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyCollection<AdminUserDeletionLog>>(deletionLogs.OrderByDescending(entry => entry.DeletedAtUtc).ToArray());
+    public Task<AdminNotificationPage> GetNotificationsAsync(string? channel, string? status, int page, int pageSize, CancellationToken cancellationToken) =>
+        Task.FromResult(new AdminNotificationPage(Array.Empty<AdminNotificationRecord>(), 0, page, pageSize));
     public Task<UserDeletionOutcome> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken)
     {
         lock (deletionLock)

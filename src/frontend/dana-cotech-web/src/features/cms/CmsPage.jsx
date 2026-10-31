@@ -13,6 +13,7 @@ import LanguageRoundedIcon from '@mui/icons-material/LanguageRounded';
 import PaletteRoundedIcon from '@mui/icons-material/PaletteRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded';
+import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
 import PreviewRoundedIcon from '@mui/icons-material/PreviewRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
@@ -57,7 +58,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCmsLandingContent, saveCmsLandingContent, uploadCmsAsset } from './cmsApi';
-import { clearSession, createPlatformSession, createUser, deleteAdminUser, getAdminPayments, getAdminSessions, getAdminUserDeletionLogs, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, reviewCareerProfile, updateUserRole } from '../platform/platformApi';
+import { clearSession, createPlatformSession, createUser, deleteAdminUser, getAdminNotifications, getAdminPayments, getAdminSessions, getAdminUserDeletionLogs, getAdminUsers, getCourseStudents, getProgramClients, getSession, refundAdminPayment, reviewCareerProfile, updateUserRole } from '../platform/platformApi';
 import { CareerClarityAssetsManager } from './CareerClarityAssetsManager';
 
 const SIDEBAR_WIDTH = 272;
@@ -67,6 +68,8 @@ const DASHBOARD_COPY = {
 };
 DASHBOARD_COPY.en.payments = 'Payments';
 DASHBOARD_COPY.ar.payments = 'الدفعات';
+DASHBOARD_COPY.en.notifications = 'Notifications';
+DASHBOARD_COPY.ar.notifications = 'الإشعارات';
 DASHBOARD_COPY.en.programClients = 'Assessment Results';
 DASHBOARD_COPY.ar.programClients = 'نتائج التقييمات';
 DASHBOARD_COPY.en.clarityAssets = 'Assessments & Media';
@@ -310,6 +313,7 @@ export function CmsPage() {
 
         {activeView === 'sessions' && <SessionManager language={dashboardLanguage} />}
         {activeView === 'payments' && <PaymentManager language={dashboardLanguage} />}
+        {activeView === 'notifications' && <NotificationManager language={dashboardLanguage} />}
         {activeView === 'program-clients' && <ProgramClientsManager language={dashboardLanguage} />}
         {activeView === 'clarity-assets' && content && <CareerClarityAssetsManager courses={content.courseOffers ?? []} language={language} onChange={(value) => updateSection('courseOffers', value)} />}
 
@@ -402,6 +406,7 @@ function AdminSidebar({ activeView, setActiveView, close, d }) {
     { value: 'courses', label: d.courses, icon: <MenuBookRoundedIcon /> },
     { value: 'sessions', label: d.sessions, icon: <DashboardRoundedIcon /> },
     { value: 'payments', label: d.payments, icon: <PaymentsRoundedIcon /> },
+    { value: 'notifications', label: d.notifications, icon: <NotificationsRoundedIcon /> },
     { value: 'program-clients', label: d.programClients, icon: <WorkspacePremiumRoundedIcon /> },
     { value: 'clarity-assets', label: d.clarityAssets, icon: <ArticleRoundedIcon /> },
     { value: 'theme', label: d.theme, icon: <PaletteRoundedIcon /> },
@@ -412,6 +417,100 @@ function AdminSidebar({ activeView, setActiveView, close, d }) {
     <Divider sx={{ borderColor: 'rgba(255,255,255,.1)' }} />
     <List sx={{ px: 1.5, py: 2 }}>{items.map((item) => <ListItemButton key={item.value} selected={activeView === item.value} onClick={() => navigate(item.value)} sx={{ mb: .75, borderRadius: 2.5, color: 'rgba(255,255,255,.72)', '&.Mui-selected': { bgcolor: 'rgba(184,207,124,.18)', color: '#d9edaa' }, '&.Mui-selected:hover': { bgcolor: 'rgba(184,207,124,.24)' } }}><ListItemIcon sx={{ minWidth: 42, color: 'inherit' }}>{item.icon}</ListItemIcon><ListItemText primary={item.label} slotProps={{ primary: { fontWeight: 800 } }} /></ListItemButton>)}</List>
     <Box sx={{ mt: 'auto', p: 1.5 }}><ListItemButton component="a" href="/" sx={{ borderRadius: 2.5, color: 'rgba(255,255,255,.72)' }}><ListItemIcon sx={{ minWidth: 42, color: 'inherit' }}><HomeRoundedIcon /></ListItemIcon><ListItemText primary={d.viewWebsite} /></ListItemButton><ListItemButton onClick={() => { clearSession(); window.location.href = '/login'; }} sx={{ borderRadius: 2.5, color: 'rgba(255,255,255,.72)' }}><ListItemIcon sx={{ minWidth: 42, color: 'inherit' }}><LogoutRoundedIcon /></ListItemIcon><ListItemText primary={d.logout} /></ListItemButton></Box>
+  </Stack>;
+}
+
+function NotificationManager({ language }) {
+  const ar = language === 'ar';
+  const copy = ar ? {
+    title: 'سجل الإشعارات', description: 'تابع حالة رسائل البريد الإلكتروني وأحداث تقويم Google وتفاصيل التسليم.',
+    refresh: 'تحديث', records: 'إجمالي الإشعارات', channel: 'القناة', allChannels: 'كل القنوات', email: 'البريد الإلكتروني', calendar: 'تقويم Google', whatsapp: 'واتساب', discord: 'ديسكورد',
+    status: 'الحالة', allStatuses: 'كل الحالات', pending: 'قيد الانتظار', processing: 'قيد المعالجة', sent: 'تم الإرسال', failed: 'فشل',
+    recipient: 'المستلم', template: 'القالب', attempts: 'المحاولات', created: 'تاريخ الإنشاء', claimed: 'بدء المعالجة', sentAt: 'تاريخ الإرسال',
+    provider: 'مرجع المزوّد / الحدث', notificationId: 'رقم الإشعار', userId: 'رقم المستخدم', lastError: 'آخر خطأ', payload: 'بيانات الإشعار',
+    empty: 'لا توجد إشعارات مطابقة لهذه المرشحات.', page: 'صفحة', of: 'من', previous: 'السابق', next: 'التالي', autoRefresh: 'تحديث تلقائي كل 30 ثانية',
+  } : {
+    title: 'Notification log', description: 'Track email delivery, Google Calendar events, and every notification’s details.',
+    refresh: 'Refresh', records: 'Total notifications', channel: 'Channel', allChannels: 'All channels', email: 'Email', calendar: 'Google Calendar', whatsapp: 'WhatsApp', discord: 'Discord',
+    status: 'Status', allStatuses: 'All statuses', pending: 'Pending', processing: 'Processing', sent: 'Sent', failed: 'Failed',
+    recipient: 'Recipient', template: 'Template', attempts: 'Attempts', created: 'Created', claimed: 'Processing started', sentAt: 'Sent at',
+    provider: 'Provider / event reference', notificationId: 'Notification ID', userId: 'User ID', lastError: 'Last error', payload: 'Notification payload',
+    empty: 'No notifications match these filters.', page: 'Page', of: 'of', previous: 'Previous', next: 'Next', autoRefresh: 'Refreshes automatically every 30 seconds',
+  };
+  const pageSize = 25;
+  const loadError = ar ? 'تعذر تحميل الإشعارات.' : 'Could not load notifications.';
+  const [filters, setFilters] = useState({ channel: '', status: '' });
+  const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [result, setResult] = useState({ items: [], totalCount: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRefreshKey((value) => value + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    getAdminNotifications({ channel: filters.channel || undefined, status: filters.status || undefined, page, pageSize })
+      .then((data) => { if (!cancelled) setResult(data || { items: [], totalCount: 0 }); })
+      .catch((requestError) => { if (!cancelled) setError(requestError?.message || loadError); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [filters.channel, filters.status, page, refreshKey, loadError]);
+
+  const rows = result.items || [];
+  const totalPages = Math.max(1, Math.ceil((result.totalCount || 0) / pageSize));
+  const dateTime = (value) => value ? new Date(value).toLocaleString(ar ? 'ar-JO' : 'en-US') : '—';
+  const statusColor = (status) => ({ sent: 'success', failed: 'error', processing: 'info', pending: 'warning' }[status?.toLowerCase()] || 'default');
+  const statusLabel = (status) => ({ pending: copy.pending, processing: copy.processing, sent: copy.sent, failed: copy.failed }[status?.toLowerCase()] || status || '—');
+
+  return <Stack spacing={2.5} dir={ar ? 'rtl' : 'ltr'}>
+    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} spacing={1.5}>
+      <Box><Typography variant="h4" fontWeight={900}>{copy.title}</Typography><Typography color="text.secondary">{copy.description}</Typography></Box>
+      <Button variant="outlined" startIcon={loading ? <CircularProgress size={18} /> : <NotificationsRoundedIcon />} onClick={() => setRefreshKey((value) => value + 1)} disabled={loading}>{copy.refresh}</Button>
+    </Stack>
+    <Paper sx={{ p: 2.5, borderRadius: 3 }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid size={{ xs: 12, sm: 4 }}><Typography variant="body2" color="text.secondary">{copy.records}</Typography><Typography variant="h5" fontWeight={900}>{(result.totalCount || 0).toLocaleString(ar ? 'ar-JO' : 'en-US')}</Typography><Typography variant="caption" color="text.secondary">{copy.autoRefresh}</Typography></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth size="small" label={copy.channel} value={filters.channel} onChange={(event) => { setPage(1); setFilters((current) => ({ ...current, channel: event.target.value })); }}><MenuItem value="">{copy.allChannels}</MenuItem><MenuItem value="email">{copy.email}</MenuItem><MenuItem value="calendar">{copy.calendar}</MenuItem><MenuItem value="whatsapp">{copy.whatsapp}</MenuItem><MenuItem value="discord">{copy.discord}</MenuItem></TextField></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><TextField select fullWidth size="small" label={copy.status} value={filters.status} onChange={(event) => { setPage(1); setFilters((current) => ({ ...current, status: event.target.value })); }}><MenuItem value="">{copy.allStatuses}</MenuItem>{['pending', 'processing', 'sent', 'failed'].map((status) => <MenuItem key={status} value={status}>{statusLabel(status)}</MenuItem>)}</TextField></Grid>
+      </Grid>
+    </Paper>
+    {error && <Alert severity="error">{error}</Alert>}
+    {loading && !rows.length ? <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}><CircularProgress /></Box> : rows.length ? <Stack spacing={1.25}>
+      {rows.map((item) => <Accordion key={item.id} disableGutters sx={{ borderRadius: '14px !important', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+        <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />} sx={{ px: 2.5 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: .75, sm: 2 }} alignItems={{ sm: 'center' }} sx={{ width: '100%', minWidth: 0 }}>
+            <Chip size="small" color={statusColor(item.status)} label={statusLabel(item.status)} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' }, fontWeight: 800 }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}><Typography fontWeight={900} noWrap>{item.recipientName} · {item.recipientEmail || item.userId}</Typography><Typography variant="body2" color="text.secondary">{item.channel === 'calendar' ? copy.calendar : item.channel === 'email' ? copy.email : item.channel === 'whatsapp' ? copy.whatsapp : item.channel === 'discord' ? copy.discord : item.channel} · {item.templateKey}</Typography></Box>
+            <Box sx={{ textAlign: { xs: 'start', sm: ar ? 'left' : 'right' }, minWidth: 130 }}><Typography variant="body2" fontWeight={800}>{copy.attempts}: {item.attempts}</Typography><Typography variant="caption" color="text.secondary">{dateTime(item.createdAtUtc)}</Typography></Box>
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 2.5, pb: 2.5, pt: 0 }}>
+          <Divider sx={{ mb: 2 }} />
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}><Typography variant="caption" color="text.secondary">{copy.recipient}</Typography><Typography fontWeight={800}>{item.recipientName} · {item.recipientEmail || '—'}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 6 }}><Typography variant="caption" color="text.secondary">{copy.template}</Typography><Typography fontWeight={800}>{item.templateKey} · {item.channel}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 6 }}><Typography variant="caption" color="text.secondary">{copy.notificationId}</Typography><Typography sx={{ overflowWrap: 'anywhere' }}>{item.id}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 6 }}><Typography variant="caption" color="text.secondary">{copy.userId}</Typography><Typography sx={{ overflowWrap: 'anywhere' }}>{item.userId}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.created}</Typography><Typography>{dateTime(item.createdAtUtc)}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.claimed}</Typography><Typography>{dateTime(item.claimedAtUtc)}</Typography></Grid>
+            <Grid size={{ xs: 12, sm: 4 }}><Typography variant="caption" color="text.secondary">{copy.sentAt}</Typography><Typography>{dateTime(item.sentAtUtc)}</Typography></Grid>
+            <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.provider}</Typography><Typography sx={{ overflowWrap: 'anywhere' }}>{item.providerReference || '—'}</Typography></Grid>
+            {item.lastError && <Grid size={{ xs: 12 }}><Alert severity="error"><Typography variant="subtitle2" fontWeight={900}>{copy.lastError}</Typography><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.lastError}</Typography></Alert></Grid>}
+            <Grid size={{ xs: 12 }}><Typography variant="caption" color="text.secondary">{copy.payload}</Typography><Paper variant="outlined" sx={{ mt: .5, p: 1.5, maxHeight: 300, overflow: 'auto', bgcolor: 'grey.50' }}><Box component="pre" sx={{ m: 0, fontSize: 12, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontFamily: 'monospace' }}>{item.payloadJson}</Box></Paper></Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>)}
+    </Stack> : !loading && !error ? <Alert severity="info">{copy.empty}</Alert> : null}
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Typography variant="body2" color="text.secondary">{copy.page} {page} {copy.of} {totalPages}</Typography>
+      <Stack direction="row" spacing={1}><Button variant="outlined" disabled={page <= 1 || loading} onClick={() => setPage((value) => value - 1)}>{copy.previous}</Button><Button variant="outlined" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>{copy.next}</Button></Stack>
+    </Stack>
   </Stack>;
 }
 

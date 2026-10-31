@@ -10,6 +10,7 @@ public interface IPlatformRepository
     Task<IReadOnlyCollection<ClientAccount>> GetUsersAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<AdminUserDeletionLog>> GetUserDeletionLogsAsync(CancellationToken cancellationToken);
     Task<UserDeletionOutcome> DeleteUserAsync(Guid actorUserId, Guid userId, CancellationToken cancellationToken);
+    Task<AdminNotificationPage> GetNotificationsAsync(string? channel, string? status, int page, int pageSize, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<(ClientAccount Account, ClientJourneyState Journey)>> GetUsersWithJourneysAsync(CancellationToken cancellationToken);
     Task UpdateUserRoleAsync(Guid userId, string role, CancellationToken cancellationToken);
     Task CreatePasswordResetAsync(PasswordResetToken token, CancellationToken cancellationToken);

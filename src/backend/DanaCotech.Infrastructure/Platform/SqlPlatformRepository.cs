@@ -138,6 +138,55 @@ public sealed class SqlPlatformRepository(ISqlConnectionFactory connectionFactor
         return outcome;
     }
 
+    public async Task<AdminNotificationPage> GetNotificationsAsync(string? channel, string? status, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        var items = new List<AdminNotificationRecord>();
+        await using var connection = connectionFactory.CreateConnection(); await connection.OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            SELECT COUNT_BIG(1)
+            FROM dbo.NotificationOutbox AS notification
+            WHERE (@Channel IS NULL OR notification.Channel = @Channel)
+              AND (@Status IS NULL OR notification.Status = @Status);
+
+            SELECT notification.Id, notification.UserId,
+                   COALESCE(account.Name, N'Unknown user'), COALESCE(account.Email, N''),
+                   notification.Channel, notification.TemplateKey, notification.Status,
+                   notification.ProviderReference, notification.Attempts, notification.CreatedAtUtc,
+                   notification.ClaimedAtUtc, notification.SentAtUtc, notification.LastError, notification.PayloadJson
+            FROM dbo.NotificationOutbox AS notification
+            LEFT JOIN dbo.ClientAccounts AS account ON account.Id = notification.UserId
+            WHERE (@Channel IS NULL OR notification.Channel = @Channel)
+              AND (@Status IS NULL OR notification.Status = @Status)
+            ORDER BY notification.CreatedAtUtc DESC, notification.Id DESC
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+            """, connection);
+        command.Parameters.Add("@Channel", System.Data.SqlDbType.NVarChar, 30).Value = (object?)channel ?? DBNull.Value;
+        command.Parameters.Add("@Status", System.Data.SqlDbType.NVarChar, 20).Value = (object?)status ?? DBNull.Value;
+        command.Parameters.AddWithValue("@Offset", (page - 1) * pageSize);
+        command.Parameters.AddWithValue("@PageSize", pageSize);
+
+        long totalCount;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            await reader.ReadAsync(cancellationToken);
+            totalCount = reader.GetInt64(0);
+            if (await reader.NextResultAsync(cancellationToken))
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    items.Add(new AdminNotificationRecord(
+                        reader.GetInt64(0), reader.GetGuid(1), reader.GetString(2), reader.GetString(3),
+                        reader.GetString(4), reader.GetString(5), reader.GetString(6),
+                        reader.IsDBNull(7) ? null : reader.GetString(7), reader.GetInt32(8), reader.GetDateTime(9),
+                        reader.IsDBNull(10) ? null : reader.GetDateTime(10), reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                        reader.IsDBNull(12) ? null : reader.GetString(12), reader.GetString(13)));
+                }
+            }
+        }
+
+        return new AdminNotificationPage(items, totalCount, page, pageSize);
+    }
+
     public async Task<IReadOnlyCollection<(ClientAccount Account, ClientJourneyState Journey)>> GetUsersWithJourneysAsync(CancellationToken cancellationToken)
     {
         var result = new List<(ClientAccount, ClientJourneyState)>();

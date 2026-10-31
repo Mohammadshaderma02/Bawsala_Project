@@ -27,6 +27,18 @@ public sealed class PlatformController(IPlatformService platformService, Session
         return response.Success ? Ok(response) : NotFound(response);
     }
 
+    [HttpGet("admin/notifications")]
+    public async Task<IActionResult> AdminNotifications(
+        [FromQuery] string? channel,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsAdmin()) return AdminAccessDenied();
+        return Ok(await platformService.GetNotificationsAsync(channel, status, page, pageSize, cancellationToken));
+    }
+
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout(CheckoutRequest request, CancellationToken cancellationToken) =>
         await WithUser(userId => platformService.EnrollAsync(userId, request.ProductSlug, request.Language, cancellationToken));

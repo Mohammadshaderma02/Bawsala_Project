@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using DanaCotech.Application.Common;
 using DanaCotech.Application.Content;
 using DanaCotech.Domain.Platform;
@@ -9,6 +10,11 @@ namespace DanaCotech.Application.Platform;
 
 public sealed class PlatformService(IPlatformRepository repository, ILandingContentRepository contentRepository) : IPlatformService
 {
+    private static readonly HashSet<string> SensitiveNotificationFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "token", "resetUrl", "verificationUrl", "accessToken", "refreshToken", "clientSecret", "password", "authorization", "apiKey"
+    };
+
     public async Task<ServiceResponse<IReadOnlyCollection<AdminUserSummary>>> GetUsersAsync(CancellationToken cancellationToken)
     {
         var users = await repository.GetUsersAsync(cancellationToken);
@@ -33,6 +39,50 @@ public sealed class PlatformService(IPlatformRepository repository, ILandingCont
             _ => "User not found"
         };
         return ServiceResponse<AdminUserDeletionLog>.Fail(message);
+    }
+
+    public async Task<ServiceResponse<AdminNotificationPage>> GetNotificationsAsync(string? channel, string? status, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        channel = string.IsNullOrWhiteSpace(channel) ? null : channel.Trim().ToLowerInvariant();
+        status = string.IsNullOrWhiteSpace(status) ? null : status.Trim().ToLowerInvariant();
+        page = Math.Clamp(page, 1, 1_000_000);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var result = await repository.GetNotificationsAsync(channel, status, page, pageSize, cancellationToken);
+        var safeItems = result.Items.Select(item => item with { PayloadJson = RedactNotificationPayload(item.PayloadJson) }).ToArray();
+        return ServiceResponse<AdminNotificationPage>.Ok(result with { Items = safeItems });
+    }
+
+    private static string RedactNotificationPayload(string payloadJson)
+    {
+        try
+        {
+            var payload = JsonNode.Parse(payloadJson);
+            RedactNotificationNode(payload);
+            return payload?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "{}";
+        }
+        catch (JsonException)
+        {
+            return "{\"message\":\"Payload is not valid JSON\"}";
+        }
+    }
+
+    private static void RedactNotificationNode(JsonNode? node)
+    {
+        if (node is JsonObject properties)
+        {
+            foreach (var property in properties.ToList())
+            {
+                if (SensitiveNotificationFields.Contains(property.Key))
+                    properties[property.Key] = "[redacted]";
+                else
+                    RedactNotificationNode(property.Value);
+            }
+        }
+        else if (node is JsonArray items)
+        {
+            foreach (var item in items)
+                RedactNotificationNode(item);
+        }
     }
 
     public async Task<ServiceResponse<IReadOnlyCollection<CourseStudentSummary>>> GetCourseStudentsAsync(string productSlug, CancellationToken cancellationToken)
