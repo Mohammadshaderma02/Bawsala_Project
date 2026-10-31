@@ -7,6 +7,8 @@ IF COL_LENGTH(N'dbo.ClientAccounts', N'IsDeleted') IS NULL
 IF COL_LENGTH(N'dbo.ClientAccounts', N'DeletedAtUtc') IS NULL
     ALTER TABLE dbo.ClientAccounts ADD DeletedAtUtc DATETIME2 NULL;
 
+GO
+
 IF NOT EXISTS
 (
     SELECT 1 FROM sys.check_constraints
@@ -30,7 +32,17 @@ BEGIN
         TargetRole NVARCHAR(20) NOT NULL,
         DeletedAtUtc DATETIME2 NOT NULL CONSTRAINT DF_AdminUserDeletionLogs_DeletedAtUtc DEFAULT SYSUTCDATETIME()
     );
+END;
 
+GO
+
+IF NOT EXISTS
+(
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.AdminUserDeletionLogs')
+      AND name = N'IX_AdminUserDeletionLogs_DeletedAtUtc'
+)
+BEGIN
     CREATE INDEX IX_AdminUserDeletionLogs_DeletedAtUtc
         ON dbo.AdminUserDeletionLogs(DeletedAtUtc DESC, Id DESC);
 END;
